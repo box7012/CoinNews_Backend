@@ -35,13 +35,12 @@ public class News {
     public News() {
     }
 
-    public News(String title) {
-        this.title = title;
-        this.date = new Date();
-    }
-
     public String getLink() {
         return link;
+    }
+
+    public String getTitle() {
+        return title;
     }
 
     public Integer getId() {

@@ -14,34 +14,43 @@
       }
 
       body {
+        position: relative;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         background: linear-gradient(135deg, #6D83F2, #4C91F1);
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
+        max-width: 10;
         color: #333; /* 글씨를 검정색으로 설정 */
         text-align: center;
         overflow: hidden;
       }
 
       #app {
+        position: relative;
         background-color: rgba(255, 255, 255, 0.9);
-        padding: 3rem;
-        border-radius: 20px;
+        padding: 15px;
+        border-radius: 15px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        max-width: 600px;
-        width: 100%;
+        
+        width: 100vw; /* 부모 요소에 맞게 크기 조정 */
+        height: 100vh; /* 화면 크기에 맞는 높이 */
         animation: fadeIn 1s ease-out;
+        box-sizing: border-box; /* 패딩 포함 */
+        overflow: auto; /* 내용이 넘칠 경우 스크롤 추가 */
       }
 
-      h1 {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        font-weight: bold;
-        color: #4C91F1;
-        text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+      /* fadeIn 애니메이션 추가 */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
       }
+
+
 
       p {
         font-size: 1.2rem;
@@ -99,10 +108,11 @@
       }
 
     </style>
-    <script type="module" crossorigin src="/assets/index-DgSTT7ai.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DDsZyLuw.css">
+    <script type="module" crossorigin src="/assets/index-DhUY0ivg.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-5CmjDuXy.css">
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+    </div>
   </body>
 </html>

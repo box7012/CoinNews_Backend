@@ -45,8 +45,8 @@ public class News {
 
     public Integer getId() {
         return id;
-    }
-
+    }   
+    
     public Date getDate() {
         return date;
     }

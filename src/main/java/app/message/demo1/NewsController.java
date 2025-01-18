@@ -2,6 +2,7 @@ package app.message.demo1;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -33,13 +35,23 @@ public class NewsController {
         return ResponseEntity.ok(news);
     }
 
-    @PostMapping("/news")
+    @PostMapping("/news/search")
     @ResponseBody
-    public ResponseEntity<List<News>> searchNews() {
+    public ResponseEntity<List<News>> searchNews(@RequestBody SearchRequest request) {
+        String searchQuery = request.getQuery().toLowerCase();  // 대소문자 구분 없이 검색어를 받음
+    
         List<News> news = newsService.getAllNews();
+    
         if (news == null || news.isEmpty()) {
             return ResponseEntity.ok(new ArrayList<>());
         }
-        return ResponseEntity.ok(news);
+    
+        // 검색어를 제목에 포함하는 뉴스만 필터링
+        List<News> filteredNews = news.stream()
+                .filter(n -> n.getTitle().toLowerCase().contains(searchQuery))
+                .collect(Collectors.toList());
+    
+        return ResponseEntity.ok(filteredNews);
     }
+
 }

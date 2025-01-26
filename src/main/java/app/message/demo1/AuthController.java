@@ -22,7 +22,7 @@ public class AuthController {
     @PostMapping("/register")
     public String register(@RequestBody Map<String, String> user) {
         User newUser = new User();
-        newUser.setEmail(user.get("username"));
+        newUser.setEmail(user.get("email"));
         newUser.setPassword(passwordEncoder.encode(user.get("password")));
         userRepository.save(newUser);
         return "User registered successfully";

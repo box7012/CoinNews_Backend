@@ -9,6 +9,8 @@ import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
 import org.springframework.stereotype.Repository;
 
+import jakarta.transaction.Transactional;
+
 @Repository
 public class UserRepository {
 
@@ -63,6 +65,8 @@ public class UserRepository {
      * @param email 검색할 이메일
      * @return Optional<User> 검색된 사용자 객체
      */
+    
+    @Transactional
     public Optional<User> findByEmail(String email) {
         try (Session session = sessionFactory.openSession()) {
             String hql = "FROM User u WHERE u.email = :email";

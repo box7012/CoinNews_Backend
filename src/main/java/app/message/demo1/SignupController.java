@@ -19,7 +19,7 @@ import jakarta.validation.Valid;
 
 @CrossOrigin
 @Controller
-@RequestMapping("/api")
+@RequestMapping("/auth")
 public class SignupController {
 
     @Autowired
@@ -27,7 +27,7 @@ public class SignupController {
 
     private final static Log log = LogFactory.getLog(SignupController.class);
 
-    @GetMapping("/{path:^(?!api).*$}")
+    @GetMapping("/{path:^(?!auth).*$}")
     public String forward() {
         return "forward:/index.html";
     }

@@ -1,5 +1,7 @@
 package app.message.demo1;
 
+import java.util.Optional;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.Session;
@@ -54,4 +56,25 @@ public class UserRepository {
             throw e; // 예외를 상위로 전달하여 컨트롤러에서 처리
         }
     }
+
+    /**
+     * 이메일로 사용자 검색
+     *
+     * @param email 검색할 이메일
+     * @return Optional<User> 검색된 사용자 객체
+     */
+    public Optional<User> findByEmail(String email) {
+        try (Session session = sessionFactory.openSession()) {
+            String hql = "FROM User u WHERE u.email = :email";
+            Query<User> query = session.createQuery(hql, User.class);
+            query.setParameter("email", email);
+            User user = query.uniqueResult();
+            return Optional.ofNullable(user);
+        } catch (Exception e) {
+            log.error("Error while finding user by email: " + email, e);
+            return Optional.empty();
+        }
+    }
+
+
 }

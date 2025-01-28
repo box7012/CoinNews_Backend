@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @RequestMapping("/api")
+@CrossOrigin(origins = "https://coin-dashboard.xyz")
 public class NewsController {
 
     @Autowired

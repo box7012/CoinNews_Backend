@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import jakarta.validation.Valid;
 
 
-@CrossOrigin
 @Controller
 @RequestMapping("/auth")
+@CrossOrigin(origins = "https://coin-dashboard.xyz")
 public class SignupController {
 
     @Autowired

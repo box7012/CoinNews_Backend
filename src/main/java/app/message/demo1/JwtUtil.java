@@ -31,20 +31,24 @@ public class JwtUtil {
 
     // 토큰 검증
     public Claims extractClaims(String token) {
-        return Jwts.parser()
+        return Jwts.parserBuilder()  // 최신 방식으로 변경
                 .setSigningKey(secretKey)  // 안전한 비밀 키 사용
+                .build()
                 .parseClaimsJws(token)
                 .getBody();
     }
 
+    // 사용자 정보 추출 (username)
     public String extractUsername(String token) {
         return extractClaims(token).getSubject();
     }
 
+    // 토큰이 유효한지 검사
     public boolean isTokenValid(String token, String username) {
         return extractUsername(token).equals(username) && !isTokenExpired(token);
     }
 
+    // 토큰 만료 여부 검사
     private boolean isTokenExpired(String token) {
         return extractClaims(token).getExpiration().before(new Date());
     }

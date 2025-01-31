@@ -35,7 +35,7 @@ public class CommunityBoardRepository {
         Session session = sessionFactory.openSession();
 
         try {
-            String hql = "FROM Posts";
+            String hql = "FROM Post";
             Query<Post> query = session.createQuery(hql, Post.class);
             return query.list();
         } finally {

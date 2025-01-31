@@ -5,11 +5,15 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CommunityBoardService {
+
+    private final Log log = LogFactory.getLog(CommunityBoardService.class);
 
     private final CommunityBoardRepository postRepository;  // 게시글을 저장하는 Repository
 
@@ -24,9 +28,10 @@ public class CommunityBoardService {
     }
 
     private Post convertToEntity(CommunityBoardPost dto) {
+
         Post post = new Post();
         post.setTitle(dto.getTitle());
-        post.setText(dto.getContent());
+        post.setText(dto.getText());
         post.setEmail(dto.getEmail());
         post.setCreatedDate(LocalDateTime.now()); // DTO에 생성 시간 정보가 있다면 사용
         // 필요한 필드를 추가적으로 매핑

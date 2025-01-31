@@ -25,7 +25,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("**").permitAll() // 정적 리소스 허용
                 .requestMatchers("/", "/index.html", "/static/**", "/js/**", "/css/**", "/images/**").permitAll() // 정적 리소스 허용
-                .requestMatchers("/login", "/register").permitAll()  // 로그인, 회원가입은 인증 없이 접근 가능
+                .requestMatchers("/auth/login", "/auth/register").permitAll()  // 로그인, 회원가입은 인증 없이 접근 가능
                 .anyRequest().authenticated()  // 그 외 요청은 인증 필요
             )
             .csrf(csrf -> csrf.disable());  // CSRF 비활성화 (Spring Security 6.1 이상에서 변경됨)

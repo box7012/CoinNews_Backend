@@ -2,7 +2,7 @@ package app.message.demo1;
 
 public class CommunityBoardPost {
     private String title;
-    private String content;
+    private String text;
     private String email;  // 이메일 필드, JWT에서 가져온 사용자 이메일을 설정
     
     // 기본 생성자
@@ -17,12 +17,12 @@ public class CommunityBoardPost {
         this.title = title;
     }
 
-    public String getContent() {
-        return content;
+    public String getText() {
+        return text;
     }
 
-    public void setContent(String content) {
-        this.content = content;
+    public void setText(String text) {
+        this.text = text;
     }
 
     public String getEmail() {

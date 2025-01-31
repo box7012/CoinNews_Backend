@@ -59,12 +59,12 @@ public class BacktestingController {
         List<String> graphs = new ArrayList<>();
         for (String ticker : tickers) {
             String symbol = convertToBinanceSymbol(ticker);
-            String url = "https://api.binance.com/api/v3/klines?symbol=" + symbol + "&interval=5m&limit=20";
+            String url = "https://api.binance.com/api/v3/klines?symbol=" + symbol + "&interval=1d&limit=100";
             // Binance API에서 OHLC 데이터 가져오기
             String ohlcData = fetchOhlcData(url);
             if (ohlcData != null) {
                 List<OHLCData> parsedData = parseBinanceData(ohlcData);
-                String graphBase64 = generateCandleChartBase64(parsedData);
+                String graphBase64 = generateCandleChartBase64(symbol, parsedData);
                 if (graphBase64 != null) {
                     graphs.add(graphBase64);
                 }
@@ -117,7 +117,7 @@ public class BacktestingController {
         }
     }
 
-    private String generateCandleChartBase64(List<OHLCData> ohlcDataList) {
+    private String generateCandleChartBase64(String symbol, List<OHLCData> ohlcDataList) {
         if (ohlcDataList == null || ohlcDataList.isEmpty()) {
             return null;
         }
@@ -141,9 +141,9 @@ public class BacktestingController {
     
         // 캔들 차트 생성
         JFreeChart chart = ChartFactory.createCandlestickChart(
-                "Candlestick Chart", // 차트 제목
+                extractTicker(symbol) + " candlestick chart", // 차트 제목
                 "Time",              // X축 레이블
-                "Price",             // Y축 레이블
+                "Price ($)",             // Y축 레이블
                 dataset,             // 데이터셋
                 false                // 범례 표시 여부
         );
@@ -187,4 +187,14 @@ public class BacktestingController {
             return null;
         }
     }
+    public static String extractTicker(String ticker) {
+        if (ticker != null && ticker.endsWith("USDT")) {
+            return ticker.substring(0, ticker.length() - 4);  // "USDT"를 제거하고 반환
+        }
+        return ticker;  // "USDT"가 없으면 그대로 반환
+    }
+
+
+
+
 }

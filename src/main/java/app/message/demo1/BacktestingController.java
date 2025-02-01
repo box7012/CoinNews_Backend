@@ -42,7 +42,8 @@ import org.jfree.data.xy.OHLCDataset;
 
 @Controller
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://192.168.0.2:8080")
+// @CrossOrigin(origins = "http://192.168.0.2:8080")
+@CrossOrigin(origins = "https://coin-dashboard.xyz/")
 public class BacktestingController {
 
     private final Log log = LogFactory.getLog(BacktestingController.class);

@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.awt.Color;
@@ -43,38 +45,89 @@ import org.jfree.data.xy.OHLCDataset;
 @Controller
 @RequestMapping("/api")
 // @CrossOrigin(origins = "http://192.168.0.2:8080")
-@CrossOrigin(origins = "https://coin-dashboard.xyz/")
+@CrossOrigin(origins = {"https://coin-dashboard.xyz", "http://192.168.0.2:8080"})
 public class BacktestingController {
 
     private final Log log = LogFactory.getLog(BacktestingController.class);
+
+    @Autowired
+    private BacktestingService backtestingService;
+
+
+    // @PostMapping("/analysis")
+    // @ResponseBody
+    // public Map<String, Object> analyze(@RequestBody Map<String, Object> requestData) {
+    //     Map<String, Object> result = new HashMap<>();
+
+    //     // 요청된 티커 목록 가져오기
+    //     List<String> tickers = (List<String>) requestData.get("tickers");
+
+    //     // 각 티커에 대한 그래프 생성
+    //     List<String> graphs = new ArrayList<>();
+    //     for (String ticker : tickers) {
+    //         String symbol = convertToBinanceSymbol(ticker);
+    //         String url = "https://api.binance.com/api/v3/klines?symbol=" + symbol + "&interval=1d&limit=100";
+    //         // Binance API에서 OHLC 데이터 가져오기
+    //         String ohlcData = fetchOhlcData(url);
+    //         if (ohlcData != null) {
+    //             List<OHLCData> parsedData = parseBinanceData(ohlcData);
+    //             String graphBase64 = generateCandleChartBase64(symbol, parsedData);
+    //             graphs.add(backtestingService.runMonteCarloSimulation(graphBase64));
+    //             if (graphBase64 != null) {
+    //                 graphs.add(graphBase64);
+    //             }
+    //         }
+    //     }
+
+    //     result.put("message", "✅ 분석 완료");
+    //     result.put("graphs", graphs);  // 각 티커에 대한 그래프 Base64 반환
+
+    //     return result;
+    // }
 
     @PostMapping("/analysis")
     @ResponseBody
     public Map<String, Object> analyze(@RequestBody Map<String, Object> requestData) {
         Map<String, Object> result = new HashMap<>();
-
+    
         // 요청된 티커 목록 가져오기
         List<String> tickers = (List<String>) requestData.get("tickers");
-
-        // 각 티커에 대한 그래프 생성
+    
+        // 각 티커에 대한 그래프를 저장할 리스트
+        List<OHLCData> allOhlcData = new ArrayList<>();
         List<String> graphs = new ArrayList<>();
+        
+        // 각 티커에 대해 Binance API 데이터를 모으기
         for (String ticker : tickers) {
             String symbol = convertToBinanceSymbol(ticker);
             String url = "https://api.binance.com/api/v3/klines?symbol=" + symbol + "&interval=1d&limit=100";
+            
             // Binance API에서 OHLC 데이터 가져오기
             String ohlcData = fetchOhlcData(url);
             if (ohlcData != null) {
-                List<OHLCData> parsedData = parseBinanceData(ohlcData);
-                String graphBase64 = generateCandleChartBase64(symbol, parsedData);
-                if (graphBase64 != null) {
-                    graphs.add(graphBase64);
-                }
+                // 데이터를 파싱해서 리스트에 저장
+                List<OHLCData> parsedData = parseBinanceData(ohlcData, ticker);
+                graphs.add(generateCandleChartBase64(symbol, parsedData));
+                allOhlcData.addAll(parsedData);  // 모든 데이터를 모음
             }
         }
-
+    
+        // 한 번에 runMonteCarloSimulation() 호출 (모은 데이터로 시뮬레이션 수행)
+        if (!allOhlcData.isEmpty()) {
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+                String jsonAllOhlcData = objectMapper.writeValueAsString(allOhlcData);
+                String simulationResult = backtestingService.runMonteCarloSimulation(jsonAllOhlcData);
+                // runMonteCarloSimulation을 한 번만 호출
+                graphs.add(0, simulationResult);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();  // 예외 처리
+            }
+        }
+    
         result.put("message", "✅ 분석 완료");
-        result.put("graphs", graphs);  // 각 티커에 대한 그래프 Base64 반환
-
+        // 그래프 결과 리스트에 추가
+        result.put("graphs", graphs);
         return result;
     }
 
@@ -83,7 +136,7 @@ public class BacktestingController {
         return ticker + "USDT"; // Binance는 "BTCUSDT" 형식 사용
     }
 
-    private List<OHLCData> parseBinanceData(String binanceResponse) {
+    private List<OHLCData> parseBinanceData(String binanceResponse, String ticker) {
         List<OHLCData> ohlcDataList = new ArrayList<>();
 
         try {
@@ -97,7 +150,7 @@ public class BacktestingController {
                 double lowPrice = Double.parseDouble(entry.get(3).toString());
                 double tradePrice = Double.parseDouble(entry.get(4).toString()); // 종가
 
-                ohlcDataList.add(new OHLCData(timestamp, openingPrice, highPrice, lowPrice, tradePrice));
+                ohlcDataList.add(new OHLCData(timestamp, openingPrice, highPrice, lowPrice, tradePrice, ticker));
             }
         } catch (Exception e) {
             log.error("❌ Binance 데이터 파싱 오류", e);

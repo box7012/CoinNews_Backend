@@ -28,7 +28,11 @@
 	</scm>
 	<properties>
 		<java.version>17</java.version>
+		<exec.args>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</exec.args>
+		<jakarta-servlet.version>4.0.3</jakarta-servlet.version>
+		<jersey.version>2.36</jersey.version>
 	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -128,6 +132,38 @@
 			<version>1.5.3</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-core_2.12</artifactId>
+			<version>3.5.0</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.antlr</groupId>
+					<artifactId>antlr4-runtime</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-sql_2.12</artifactId>
+			<version>3.5.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr4-runtime</artifactId>
+			<version>4.9.3</version> <!-- 최신 버전으로 설정 -->
+		</dependency>
+
+		<!-- chart -->
+		<dependency>
+			<groupId>org.knowm.xchart</groupId>
+			<artifactId>xchart</artifactId>
+			<version>3.8.0</version>
+		</dependency>
+
+
+
 
 	</dependencies>
 
@@ -138,6 +174,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
+					<argLine>--add-opens java.base/sun.nio.ch=ALL-UNNAMED</argLine>
 					<mainClass>app.message.demo1.Application</mainClass>
 				</configuration>
 			</plugin>

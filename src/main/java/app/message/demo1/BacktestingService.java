@@ -26,6 +26,8 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 import java.util.Random;
+import java.util.stream.Collectors;
+
 import org.knowm.xchart.*;
 
 @Service
@@ -45,71 +47,101 @@ public class BacktestingService {
         Dataset<Row> df = spark.read().json(spark.createDataset(Arrays.asList(jsonData), Encoders.STRING()));
     
         // ✅ 날짜별로 티커별 가격을 변환 (pivot)
-        Dataset<Row> pivotedDf = df.groupBy("time")  // 날짜별로 그룹화
-                                   .pivot("ticker")  // ticker별로 열을 만듬
-                                   .agg(functions.first("tradePrice"));  // 가격을 첫 번째로 가져옴
-    
-        pivotedDf.show();
-    
-        // ✅ 각 티커에 대한 수익률 계산 (pct_change 대체)
-        Dataset<Row> firstTicerShiftedDf = pivotedDf.withColumn("prev_ETH", functions.lag("ETH", 1).over(
-                Window.orderBy("time")));
-                firstTicerShiftedDf.show();
+        // Step 1: Pivot the DataFrame
+        Dataset<Row> pivotedDf = df.groupBy("time")  // Group by time
+                                .pivot("ticker")  // Pivot by ticker
+                                .agg(functions.first("tradePrice"));  // Use the first trade price for each ticker
 
-        Dataset<Row> secondTicerShiftedDf = firstTicerShiftedDf.withColumn("prev_BTC", functions.lag("BTC", 1).over(
-            Window.orderBy("time")));
-            secondTicerShiftedDf.show();
-        
-        Dataset<Row> firstdailyReturns = secondTicerShiftedDf.withColumn("daily_ret_ETH",
-            functions.expr("(ETH - prev_ETH) / prev_ETH"));
-            firstdailyReturns.show();
+        // Step 2: Extract ticker columns (excluding "time")
+        String[] tickerColumns = pivotedDf.columns();
+        List<String> tickers = Arrays.stream(tickerColumns)
+                                    .filter(col -> !col.equals("time"))
+                                    .collect(Collectors.toList());
 
-        Dataset<Row> seconddailyReturns = firstdailyReturns.withColumn("daily_ret_BTC",
-            functions.expr("(BTC - prev_BTC) / prev_BTC"));
-            seconddailyReturns.show();
-                
-        Dataset<Row> resultDf = seconddailyReturns.select(
-            "daily_ret_ETH", "daily_ret_BTC"
+        // Step 3: Create "prev" columns using lag function
+        Dataset<Row> shiftedDf = pivotedDf;
+        for (String ticker : tickers) {
+            String prevTicker = "prev_" + ticker;
+            shiftedDf = shiftedDf.withColumn(prevTicker, functions.lag(ticker, 1).over(Window.orderBy("time")));
+        }
+
+        // Step 4: Calculate daily returns
+        Dataset<Row> dailyReturnsDf = shiftedDf;
+        for (String ticker : tickers) {
+            String dailyRet = "daily_ret_" + ticker;
+            String prevTicker = "prev_" + ticker;
+            dailyReturnsDf = dailyReturnsDf.withColumn(dailyRet, functions.expr("(" + ticker + " - " + prevTicker + ") / " + prevTicker));
+        }
+
+        // Step 5: Select only daily return columns
+        List<String> dailyRetColumns = tickers.stream()
+                                            .map(ticker -> "daily_ret_" + ticker)
+                                            .collect(Collectors.toList());
+
+        Dataset<Row> resultDf = dailyReturnsDf.selectExpr(dailyRetColumns.toArray(new String[0]));
+
+        // Step 6: Remove rows with null values in the first daily return column
+        Dataset<Row> nullRemovedResultDf = resultDf.filter(resultDf.col(dailyRetColumns.get(0)).isNotNull());
+
+    
+        // 데이터프레임의 모든 컬럼 중에서 "daily_ret"이 포함된 컬럼명만 필터링
+        String[] RetColumns = Arrays.stream(dailyReturnsDf.columns())
+                .filter(colName -> colName.contains("daily_ret"))
+                .toArray(String[]::new);
+
+        // filteredDf는 daily_ret 컬럼만 포함하는 데이터프레임
+        Dataset<Row> filteredDf = nullRemovedResultDf.select(
+            Arrays.stream(RetColumns)
+                .map(functions::col)  // String 배열을 Column 배열로 변환
+                .toArray(Column[]::new)  // Column 배열로 변환
         );
+
+
+        // Step 7: Calculate covariance (assuming covCalculate is a method defined elsewhere)
+        Dataset<Row> covCalculatedDataset = covCalculate(filteredDf);
+
+        // Step 8: Calculate annual returns
+        Map<String, Column> aggregatedColumns = tickers.stream()
+                .collect(Collectors.toMap(
+                        ticker -> "annual_ret_" + ticker,  // Key: annual return column name
+                        ticker -> functions.avg("daily_ret_" + ticker)  // Value: average of daily returns
+                ));
+
+        // aggregatedColumns에서 alias가 적용된 Column 배열 생성
+        Column[] aggColumns = aggregatedColumns.entrySet().stream()
+                .map(entry -> entry.getValue().alias(entry.getKey()))
+                .toArray(Column[]::new);
+
+
+
+        Dataset<Row> meanReturn = calculateAnnualReturn(nullRemovedResultDf);
+
+
+
+        log.info(" 여기까진왔다: " + tickers);
         
         resultDf.show();
+        log.info(" 여기까진왔다1");
 
-        Dataset<Row> nullRemovedResultDf = resultDf.filter(resultDf.col("daily_ret_ETH").isNotNull());
-        Dataset<Row> covCalculatedDataset = covCalculate(nullRemovedResultDf);
+        nullRemovedResultDf.show();
+        log.info(" 여기까진왔다2");
+
+        nullRemovedResultDf.show();
+        log.info(" 여기까진왔다3");    
+
         covCalculatedDataset.show();
-
-        log.info("여기까진 됐다! - 1");
-    
-        // ✅ 연평균 수익률 및 공분산 계산
-        Dataset<Row> meanReturn = seconddailyReturns.groupBy("time").agg(functions.avg("daily_ret_ETH").alias("annual_ret_ETH"));
-        
-        // Covariance 행렬 계산
-        Dataset<Row> covMatrixETH = resultDf.agg(functions.covar_samp("daily_ret_ETH", "daily_ret_ETH").alias("annual_cov_ETH"));
-        covMatrixETH.show();
-        log.info("여기까진 됐다! - 3");
-        
-        Dataset<Row> covMatrixBTC = resultDf.agg(functions.covar_samp("daily_ret_BTC", "daily_ret_BTC").alias("annual_cov_BTC"));
-        log.info("여기까진 됐다! - 5");
-        // daily_ret_ETH와 daily_ret_BTC의 평균값을 구하고 365배 하기
-        Dataset<Row> avgReturns = seconddailyReturns.agg(
-            (functions.avg("daily_ret_ETH").multiply(365)).alias("annual_ret_ETH"),
-            (functions.avg("daily_ret_BTC").multiply(365)).alias("annual_ret_BTC")
-        );
-        avgReturns.show();
-        log.info("여기까진 됐다! - 4");
-        // ✅ 몬테카를로 시뮬레이션 실행
-        int simulations = 20000;
-        Random rand = new Random();
-
-        Dataset<Row> null_removed_meanReturnETH = resultDf.filter(resultDf.col("daily_ret_ETH").isNotNull());
-        log.info("calculatePortfolioMetrics");
-        Map<String, List<?>> calculated_result = calculatePortfolioMetrics(avgReturns, covCalculatedDataset, 20000);
+        log.info(" 여기까진왔다4");    
+         // ✅ 몬테카를로 시뮬레이션 실행
+        Map<String, List<?>> calculated_result = calculatePortfolioMetrics(meanReturn, covCalculatedDataset, 20000);
 
         // ✅ 그래프 생성
-        // BufferedImage chartImage = generateChart(returns, risks);
         BufferedImage chartImage = generateChart(calculated_result.get("portRet"), calculated_result.get("portRisk"));
         
         // ✅ Base64 인코딩하여 반환
+        String[] columnNames = pivotedDf.columns();
+        for (String columnName : columnNames) {
+            System.out.println(columnName);  // 컬럼명 출력
+        }
         return encodeImageToBase64(chartImage);
     }
 
@@ -141,7 +173,7 @@ public class BacktestingService {
                 tickers.add(col);
             }
         }
-
+    
         List<Row> covList = new ArrayList<>();
         for (String t1 : tickers) {
             for (String t2 : tickers) {
@@ -149,22 +181,26 @@ public class BacktestingService {
                 covList.add(RowFactory.create(t1, t2, covValue));
             }
         }
-
+    
         // 스키마 정의
         StructType schema = DataTypes.createStructType(new StructField[]{
                 DataTypes.createStructField("Ticker1", DataTypes.StringType, false),
                 DataTypes.createStructField("Ticker2", DataTypes.StringType, false),
                 DataTypes.createStructField("Covariance", DataTypes.DoubleType, false)
         });
-
+    
         // Spark DataFrame 변환
         SparkSession spark = df.sparkSession();
         Dataset<Row> covDf = spark.createDataFrame(covList, schema);
-
+    
         // 피벗하여 행렬 형태로 변환
         covDf = covDf.groupBy("Ticker1").pivot("Ticker2").agg(functions.first("Covariance"));
-
-        // 최종 결과를 List<Row>로 변환하여 반환
+    
+        // 모든 수치 값(공분산 값)에 365를 곱함
+        for (String ticker : tickers) {
+            covDf = covDf.withColumn(ticker, functions.col(ticker).multiply(365));
+        }
+    
         return covDf;
     }
 
@@ -250,8 +286,33 @@ public class BacktestingService {
                 covarianceMatrix[i][j] = row.getDouble(j + 1); // assuming that columns 1 to N contain the covariance values
             }
         }
-
         return covarianceMatrix;
+    }
+
+    public Dataset<Row> calculateAnnualReturn(Dataset<Row> df) {
+        // 컬럼명 리스트 가져오기
+        // aggregatedColumns: Map<String, Column>를 생성하는 부분
+        Map<String, Column> aggregatedColumns = Arrays.stream(df.columns())
+            .collect(Collectors.toMap(
+                col -> col.replace("daily_ret", "annual_ret"),  // 컬럼명 변경
+                col -> functions.avg(col).multiply(365)           // 평균 계산 후 365 곱하기
+            ));
+
+        // Map의 값을 Column 배열로 변환 (alias 적용)
+        Column[] aggColumns = aggregatedColumns.entrySet().stream()
+            .map(entry -> entry.getValue().alias(entry.getKey()))
+            .toArray(Column[]::new);
+
+        // agg() 메서드는 varargs 형식으로 받으므로, 첫 번째 원소와 나머지 원소들을 분리하여 전달합니다.
+        Dataset<Row> annualReturns;
+        if (aggColumns.length > 0) {
+            annualReturns = df.agg(aggColumns[0], Arrays.copyOfRange(aggColumns, 1, aggColumns.length));
+        } else {
+            // 처리할 컬럼이 없는 경우에 대한 처리 (예: 빈 데이터프레임 반환)
+            annualReturns = df;
+        }
+    
+        return annualReturns;
     }
 
 }

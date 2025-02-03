@@ -20,7 +20,7 @@ public class CommunityBoardRepository {
     
     // 게시글 저장
     public void save(Post post) {
-        String sql = "INSERT INTO posts (email, title, text, created_date) VALUES (?, ?, ?)";  // 테이블에 맞게 수정
+        String sql = "INSERT INTO posts (email, title, text, created_date) VALUES (?, ?, ?, ?)";  // 테이블에 맞게 수정
         
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

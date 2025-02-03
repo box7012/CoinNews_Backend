@@ -27,7 +27,6 @@ public class News {
     @Column(name = "link", nullable = true, length = 256)
     private String link;
 
-
     @Column(name = "date", nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
     private Date date;
@@ -46,15 +45,25 @@ public class News {
     public Integer getId() {
         return id;
     }   
-    
+
     public Date getDate() {
         return date;
     }
 
+    // set 메서드 추가
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
+    public void setLink(String link) {
+        this.link = link;
+    }
 
-
-
-    
+    public void setDate(Date date) {
+        this.date = date;
+    }
 }

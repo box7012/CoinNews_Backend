@@ -53,7 +53,25 @@
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-core</artifactId>
 			<version>6.6.4.Final</version>
+			<!-- <exclusions>
+				<exclusion>
+					<groupId>org.antlr</groupId>
+					<artifactId>antlr-runtime</artifactId>
+				</exclusion>
+			</exclusions> -->
 		</dependency>
+		<!-- <dependency>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>6.6.4.Final</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.antlr</groupId>
+					<artifactId>antlr-runtime</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency> -->
+
 
 		<dependency>
 			<groupId>com.mysql</groupId>
@@ -143,11 +161,25 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
 		<dependency>
 			<groupId>org.apache.spark</groupId>
 			<artifactId>spark-sql_2.12</artifactId>
 			<version>3.5.0</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.antlr</groupId>
+					<artifactId>antlr4-runtime</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
+
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-client</artifactId>
+			<version>3.3.4</version> <!-- Spark 3.5.0과 호환되는 버전 -->
+		</dependency>
+
 
 		<dependency>
 			<groupId>org.antlr</groupId>

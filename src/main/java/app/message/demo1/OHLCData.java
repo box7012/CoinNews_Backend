@@ -37,4 +37,18 @@ public class OHLCData {
     public String getTicker() { return ticker; }
 
     public long getTime() { return timestamp; }
+    
+    @Override
+    public String toString() {
+        return "OHLCData{" +
+            "timestamp=" + timestamp +
+            ", openingPrice=" + openingPrice +
+            ", highPrice=" + highPrice +
+            ", lowPrice=" + lowPrice +
+            ", tradePrice=" + tradePrice +
+            ", ticker='" + ticker + '\'' +
+            ", buySignal=" + buySignal +
+            ", sellSignal=" + sellSignal +
+            '}';
+    }
 }

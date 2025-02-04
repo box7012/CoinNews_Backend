@@ -22,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -31,6 +32,7 @@ import java.text.SimpleDateFormat;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.jfree.chart.axis.DateAxis;
 
 import org.jfree.chart.plot.XYPlot;
@@ -52,38 +54,6 @@ public class BacktestingController {
 
     @Autowired
     private BacktestingService backtestingService;
-
-
-    // @PostMapping("/analysis")
-    // @ResponseBody
-    // public Map<String, Object> analyze(@RequestBody Map<String, Object> requestData) {
-    //     Map<String, Object> result = new HashMap<>();
-
-    //     // 요청된 티커 목록 가져오기
-    //     List<String> tickers = (List<String>) requestData.get("tickers");
-
-    //     // 각 티커에 대한 그래프 생성
-    //     List<String> graphs = new ArrayList<>();
-    //     for (String ticker : tickers) {
-    //         String symbol = convertToBinanceSymbol(ticker);
-    //         String url = "https://api.binance.com/api/v3/klines?symbol=" + symbol + "&interval=1d&limit=100";
-    //         // Binance API에서 OHLC 데이터 가져오기
-    //         String ohlcData = fetchOhlcData(url);
-    //         if (ohlcData != null) {
-    //             List<OHLCData> parsedData = parseBinanceData(ohlcData);
-    //             String graphBase64 = generateCandleChartBase64(symbol, parsedData);
-    //             graphs.add(backtestingService.runMonteCarloSimulation(graphBase64));
-    //             if (graphBase64 != null) {
-    //                 graphs.add(graphBase64);
-    //             }
-    //         }
-    //     }
-
-    //     result.put("message", "✅ 분석 완료");
-    //     result.put("graphs", graphs);  // 각 티커에 대한 그래프 Base64 반환
-
-    //     return result;
-    // }
 
     @PostMapping("/analysis")
     @ResponseBody
@@ -228,6 +198,52 @@ public class BacktestingController {
         double margin = (maxPrice - minPrice) * 0.1; // 10% 여유 공간 추가
         plot.getRangeAxis().setRange(new Range(minPrice - margin, maxPrice + margin));
     
+        // 🔵 파란색 삼각형(매수) 추가 (마지막 데이터 기준)
+        if (!ohlcDataList.isEmpty()) {
+            int lastIndex = ohlcDataList.size() - 1;
+            OHLCData lastData = ohlcDataList.get(lastIndex);
+            
+            double x = lastData.getTimestamp(); // X축 (시간)
+            double y = lastData.getTradePrice(); // Y축 (가격)
+
+            double sizeX = 1000 * 60 * 60; // X축 크기 (예: 1시간 단위)
+            double sizeY = (maxPrice - minPrice) * 0.02; // Y축 크기 (2% 비율)
+
+            double[] triangle = {
+                x, y + sizeY,  // 꼭대기
+                x - 20 * sizeX, y - (sizeY / 2),  // 왼쪽 아래
+                x + 20 * sizeX, y -  (sizeY / 2)  // 오른쪽 아래
+            };
+
+            XYPolygonAnnotation annotation = new XYPolygonAnnotation(
+                triangle, new BasicStroke(1.5f), Color.BLUE, Color.BLUE
+            );
+            plot.addAnnotation(annotation);
+        }
+
+        // 🟡 노란색 삼각형(매도) 추가 (마지막 데이터 기준)
+        if (!ohlcDataList.isEmpty()) {
+            int lastIndex = ohlcDataList.size() - 1;
+            OHLCData lastData = ohlcDataList.get(lastIndex);
+            
+            double x = lastData.getTimestamp(); // X축 (시간)
+            double y = lastData.getOpeningPrice(); // Y축 (가격)
+
+            double sizeX = 1000 * 60 * 60; // X축 크기 (예: 1시간 단위)
+            double sizeY = (maxPrice - minPrice) * 0.02; // Y축 크기 (2% 비율)
+
+            double[] triangle = {
+                x, y - sizeY,  // 꼭대기
+                x - 20 * sizeX, y + (sizeY / 2),  // 왼쪽 아래
+                x + 20 * sizeX, y +  (sizeY / 2)  // 오른쪽 아래
+            };
+
+            XYPolygonAnnotation annotation = new XYPolygonAnnotation(
+                triangle, new BasicStroke(1.5f), Color.YELLOW, Color.YELLOW
+            );
+            plot.addAnnotation(annotation);
+        }
+
         // 차트를 BufferedImage로 변환
         BufferedImage image = chart.createBufferedImage(800, 600);
     

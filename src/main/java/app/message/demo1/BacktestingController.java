@@ -6,7 +6,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -72,7 +72,7 @@ public class BacktestingController {
         // 각 티커에 대한 그래프를 저장할 리스트
         List<OHLCData> allOhlcData = new ArrayList<>();
         List<String> graphs = new ArrayList<>();
-        List<Dataset<Row>> backTestedResult = new ArrayList<>();
+        List<List<Map<String,Object>>> backTestedResult = new ArrayList<>();
         
         // 각 티커에 대해 Binance API 데이터를 모으기
         for (String ticker : tickers) {
@@ -88,9 +88,20 @@ public class BacktestingController {
                 // 진행한 결과데이터를 generateCandleChartBase64에 넘겨줌 - 여기엔 매수, 매도정보가 들어있음
                 // 그래프용 데이터는 넘겨주고, 이걸 가지고 계산을 한 결과도 따로 엑셀 표처럼 보여줄 예정
                 Dataset<Row> rsiBackTestedDf = backTester.backTestingRSIDataset(parsedData);
+                List<Map<String, Object>> rsiBackTestedList = rsiBackTestedDf.collectAsList().stream()
+                    .map(row -> {
+                        Map<String, Object> map = new HashMap<>();
+                        for (String field : row.schema().fieldNames()) {
+                            map.put(field, row.getAs(field));
+                        }
+                        return map;
+                    })
+                    .collect(Collectors.toList());
+
+                backTestedResult.add(rsiBackTestedList); 
                 // for 문 위에다 
                 // result.add("")
-                backTestedResult.add(rsiBackTestedDf);
+                
                 graphs.add(generateCandleChartBase64(symbol, parsedData));
                 allOhlcData.addAll(parsedData);  // 모든 데이터를 모음
             }

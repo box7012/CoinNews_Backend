@@ -22,6 +22,9 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -55,6 +58,9 @@ public class BacktestingController {
     @Autowired
     private BacktestingService backtestingService;
 
+    @Autowired
+    private BackTester backTester;
+
     @PostMapping("/analysis")
     @ResponseBody
     public Map<String, Object> analyze(@RequestBody Map<String, Object> requestData) {
@@ -66,9 +72,8 @@ public class BacktestingController {
         // 각 티커에 대한 그래프를 저장할 리스트
         List<OHLCData> allOhlcData = new ArrayList<>();
         List<String> graphs = new ArrayList<>();
+        List<Dataset<Row>> backTestedResult = new ArrayList<>();
         
-        List a = new ArrayList<>();
-
         // 각 티커에 대해 Binance API 데이터를 모으기
         for (String ticker : tickers) {
             String symbol = convertToBinanceSymbol(ticker);
@@ -79,14 +84,13 @@ public class BacktestingController {
             if (ohlcData != null) {
                 // 데이터를 파싱해서 리스트에 저장
                 List<OHLCData> parsedData = parseBinanceData(ohlcData, ticker);
-                a.add(parsedData);
                 // parsedData 데이터와, client에서 보내온 데이터를 가지고 백테스팅을 진행,
                 // 진행한 결과데이터를 generateCandleChartBase64에 넘겨줌 - 여기엔 매수, 매도정보가 들어있음
                 // 그래프용 데이터는 넘겨주고, 이걸 가지고 계산을 한 결과도 따로 엑셀 표처럼 보여줄 예정
-
+                Dataset<Row> rsiBackTestedDf = backTester.backTestingRSIDataset(parsedData);
                 // for 문 위에다 
                 // result.add("")
-
+                backTestedResult.add(rsiBackTestedDf);
                 graphs.add(generateCandleChartBase64(symbol, parsedData));
                 allOhlcData.addAll(parsedData);  // 모든 데이터를 모음
             }
@@ -108,7 +112,7 @@ public class BacktestingController {
         result.put("message", "✅ 분석 완료");
         // 그래프 결과 리스트에 추가
         result.put("graphs", graphs);
-        System.out.println(a.get(0));
+        result.put("backtestresult", backTestedResult);
         return result;
     }
 

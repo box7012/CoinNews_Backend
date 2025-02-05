@@ -16,7 +16,5 @@ public class NewsService {
     public List<News> getAllNews() {
         return repository.findAll();
     }
-
         
-    
 }

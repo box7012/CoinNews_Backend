@@ -20,6 +20,7 @@ import org.apache.spark.sql.types.StructType;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import java.util.Random;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.knowm.xchart.*;
 
@@ -118,16 +120,16 @@ public class BacktestingService {
 
 
 
-        log.info(" 여기까진왔다: " + tickers);
+        // log.info(" 여기까진왔다: " + tickers);
         
-        resultDf.show();
-        log.info(" 여기까진왔다1");
+        // resultDf.show();
+        // log.info(" 여기까진왔다1");
 
-        nullRemovedResultDf.show();
-        log.info(" 여기까진왔다2");
+        // nullRemovedResultDf.show();
+        // log.info(" 여기까진왔다2");
 
-        nullRemovedResultDf.show();
-        log.info(" 여기까진왔다3");    
+        // nullRemovedResultDf.show();
+        // log.info(" 여기까진왔다3");    
 
         covCalculatedDataset.show();
         log.info(" 여기까진왔다4");    
@@ -142,6 +144,7 @@ public class BacktestingService {
         for (String columnName : columnNames) {
             System.out.println(columnName);  // 컬럼명 출력
         }
+
         return encodeImageToBase64(chartImage);
     }
 
@@ -165,15 +168,16 @@ public class BacktestingService {
         }
     }
 
-    public static Dataset<Row> covCalculate(Dataset<Row> df) {
+    public Dataset<Row> covCalculate(Dataset<Row> df) {
         // time 컬럼 제외한 티커 리스트 추출
+
         List<String> tickers = new ArrayList<>(df.columns().length - 1);
         for (String col : df.columns()) {
             if (!col.equals("time")) {
                 tickers.add(col);
             }
         }
-    
+
         List<Row> covList = new ArrayList<>();
         for (String t1 : tickers) {
             for (String t2 : tickers) {
@@ -200,9 +204,10 @@ public class BacktestingService {
         for (String ticker : tickers) {
             covDf = covDf.withColumn(ticker, functions.col(ticker).multiply(365));
         }
-    
+        
         return covDf;
     }
+
 
     public Map<String, List<?>> calculatePortfolioMetrics(Dataset<Row> avgReturns, Dataset<Row> covCalculatedDataset, int simulations) {
         List<Double> portRet = new ArrayList<>();
@@ -212,9 +217,17 @@ public class BacktestingService {
 
         // 평균 수익률 및 공분산 추출
         double[] annualRet = extractReturns(avgReturns);
-        log.info("annualRet" + annualRet.length);
+        avgReturns.show();
+        log.info("avgReturns");
+
+        log.info("annualRet: " + Arrays.toString(annualRet));
+        log.info("annualRet length: " + annualRet.length);
+
 
         double[][] annualCov = extractCovariance(covCalculatedDataset);
+        
+        log.info("annualCov: " + Arrays.deepToString(annualCov));
+        log.info("covcov");
 
         // 시뮬레이션을 통한 포트폴리오 계산
         Random rand = new Random();
@@ -253,25 +266,40 @@ public class BacktestingService {
             portWeights.add(weights);
             sharpeRatio.add(sharpe);
         }
+
         Map<String, List<?>> result = new HashMap<>();
         result.put("portRet", portRet);
         result.put("portRisk", portRisk);
         result.put("portWeights", portWeights);
         result.put("sharpeRatio", sharpeRatio);
 
+        // 샤프 비율이 가장 높은 포트폴리오 찾기
+        int maxSharpeIndex = IntStream.range(0, sharpeRatio.size())
+                .boxed()
+                .max(Comparator.comparing(sharpeRatio::get))
+                .orElse(-1);
+
+        if (maxSharpeIndex != -1) {
+            double[] bestWeights = portWeights.get(maxSharpeIndex);
+            log.info("최대 샤프 비율: " + sharpeRatio.get(maxSharpeIndex));
+            log.info("최적 포트폴리오 가중치: " + Arrays.toString(bestWeights));
+        }
+        
+        log.info(annualRet);
         return result;
     }
 
     private double[] extractReturns(Dataset<Row> avgReturns) {
-        // avgReturns에서 연간 수익률 추출 (가정: 각 row가 티커의 평균 수익률을 담고 있다고 가정)
-        int numTickers = (int) avgReturns.count();
-        double[] returns = new double[numTickers];
-
-        for (int i = 0; i < numTickers; i++) {
-            Row row = avgReturns.collectAsList().get(i);
-            returns[i] = row.getDouble(1); // assuming the second column contains the return values
+        // avgReturns에 한 행만 있다고 가정합니다.
+        Row row = avgReturns.collectAsList().get(0);
+        // 행에 포함된 컬럼 개수를 구합니다.
+        int numCols = row.size();  // 또는 row.length()를 사용할 수 있습니다.
+        
+        double[] returns = new double[numCols];
+        for (int i = 0; i < numCols; i++) {
+            returns[i] = row.getDouble(i);
         }
-
+        
         return returns;
     }
 
@@ -314,5 +342,7 @@ public class BacktestingService {
     
         return annualReturns;
     }
+
+    
 
 }

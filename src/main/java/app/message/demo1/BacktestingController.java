@@ -98,7 +98,11 @@ public class BacktestingController {
                     })
                     .collect(Collectors.toList());
 
-                backTestedResult.add(rsiBackTestedList); 
+                List<Map<String, Object>> testResult = rsiBackTestedList.stream()
+                    .filter(map -> map.get("buySignal") != null || map.get("sellSignal") != null)
+                    .collect(Collectors.toList());
+
+                backTestedResult.add(testResult); 
                 // for 문 위에다 
                 // result.add("")
                 

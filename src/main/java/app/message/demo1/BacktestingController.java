@@ -2,6 +2,7 @@ package app.message.demo1;
 
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -68,6 +69,9 @@ public class BacktestingController {
     
         // 요청된 티커 목록 가져오기
         List<String> tickers = (List<String>) requestData.get("tickers");
+
+        // 알파벳순 정렬
+        Collections.sort(tickers);
     
         // 각 티커에 대한 그래프를 저장할 리스트
         List<OHLCData> allOhlcData = new ArrayList<>();

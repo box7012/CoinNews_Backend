@@ -20,6 +20,7 @@ import org.apache.spark.sql.types.StructType;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +54,8 @@ public class BacktestingService {
         Dataset<Row> pivotedDf = df.groupBy("time")  // Group by time
                                 .pivot("ticker")  // Pivot by ticker
                                 .agg(functions.first("tradePrice"));  // Use the first trade price for each ticker
+
+        pivotedDf = pivotedDf.na().drop();
 
         // Step 2: Extract ticker columns (excluding "time")
         String[] tickerColumns = pivotedDf.columns();
@@ -121,12 +124,13 @@ public class BacktestingService {
 
 
         // log.info(" 여기까진왔다: " + tickers);
-        
-        // resultDf.show();
-        // log.info(" 여기까진왔다1");
+    
+        String[] columns = filteredDf.columns();
+        df.show();
+        log.info(" 여기까진왔다1");
 
-        // nullRemovedResultDf.show();
-        // log.info(" 여기까진왔다2");
+        pivotedDf.show();
+        log.info(" 여기까진왔다2");
 
         // nullRemovedResultDf.show();
         // log.info(" 여기까진왔다3");    
@@ -150,10 +154,18 @@ public class BacktestingService {
 
     // 📌 XChart를 이용해 그래프 생성
     private BufferedImage generateChart(List returns, List risks) {
-        XYChart chart = new XYChartBuilder().width(800).height(600).title("Monte Carlo Simulation")
-                .xAxisTitle("Risk").yAxisTitle("Expected Return").build();
-
-        chart.addSeries("Simulations", risks, returns);
+        XYChart chart = new XYChartBuilder()
+                            .width(800)
+                            .height(600)
+                            .title("Monte Carlo Simulation")
+                            .xAxisTitle("Risk")
+                            .yAxisTitle("Expected Return")
+                            .build();
+    
+        // 시리즈 추가 및 Scatter 스타일로 설정
+        XYSeries series = chart.addSeries("Simulations", risks, returns);
+        series.setXYSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Scatter);
+        
         return BitmapEncoder.getBufferedImage(chart);
     }
 
@@ -171,7 +183,7 @@ public class BacktestingService {
     public Dataset<Row> covCalculate(Dataset<Row> df) {
         // time 컬럼 제외한 티커 리스트 추출
 
-        List<String> tickers = new ArrayList<>(df.columns().length - 1);
+        List<String> tickers = new ArrayList<>();
         for (String col : df.columns()) {
             if (!col.equals("time")) {
                 tickers.add(col);
@@ -289,17 +301,37 @@ public class BacktestingService {
         return result;
     }
 
+    // private double[] extractReturns(Dataset<Row> avgReturns) {
+    //     // avgReturns에 한 행만 있다고 가정합니다.
+    //     Row row = avgReturns.collectAsList().get(0);
+    //     // 행에 포함된 컬럼 개수를 구합니다.
+    //     int numCols = row.size();  // 또는 row.length()를 사용할 수 있습니다.
+        
+    //     double[] returns = new double[numCols];
+    //     for (int i = 0; i < numCols; i++) {
+    //         returns[i] = row.getDouble(i);
+    //     }
+        
+    //     return returns;
+    // }
+
     private double[] extractReturns(Dataset<Row> avgReturns) {
+        // avgReturns의 컬럼 이름을 알파벳 순으로 정렬합니다.
+        List<String> columnNames = Arrays.asList(avgReturns.columns());
+        Collections.sort(columnNames);
+    
         // avgReturns에 한 행만 있다고 가정합니다.
         Row row = avgReturns.collectAsList().get(0);
-        // 행에 포함된 컬럼 개수를 구합니다.
-        int numCols = row.size();  // 또는 row.length()를 사용할 수 있습니다.
-        
-        double[] returns = new double[numCols];
-        for (int i = 0; i < numCols; i++) {
-            returns[i] = row.getDouble(i);
+    
+        // 컬럼 개수에 맞는 배열 생성
+        double[] returns = new double[columnNames.size()];
+    
+        // 알파벳 순으로 정렬된 컬럼 순서대로 값을 추출
+        for (int i = 0; i < columnNames.size(); i++) {
+            // 컬럼 이름에 맞는 값을 추출
+            returns[i] = row.getDouble(Arrays.asList(avgReturns.columns()).indexOf(columnNames.get(i)));
         }
-        
+    
         return returns;
     }
 
@@ -317,6 +349,32 @@ public class BacktestingService {
         return covarianceMatrix;
     }
 
+    // public Dataset<Row> calculateAnnualReturn(Dataset<Row> df) {
+    //     // 컬럼명 리스트 가져오기
+    //     // aggregatedColumns: Map<String, Column>를 생성하는 부분
+    //     Map<String, Column> aggregatedColumns = Arrays.stream(df.columns())
+    //         .collect(Collectors.toMap(
+    //             col -> col.replace("daily_ret", "annual_ret"),  // 컬럼명 변경
+    //             col -> functions.avg(col).multiply(365)           // 평균 계산 후 365 곱하기
+    //         ));
+
+    //     // Map의 값을 Column 배열로 변환 (alias 적용)
+    //     Column[] aggColumns = aggregatedColumns.entrySet().stream()
+    //         .map(entry -> entry.getValue().alias(entry.getKey()))
+    //         .toArray(Column[]::new);
+
+    //     // agg() 메서드는 varargs 형식으로 받으므로, 첫 번째 원소와 나머지 원소들을 분리하여 전달합니다.
+    //     Dataset<Row> annualReturns;
+    //     if (aggColumns.length > 0) {
+    //         annualReturns = df.agg(aggColumns[0], Arrays.copyOfRange(aggColumns, 1, aggColumns.length));
+    //     } else {
+    //         // 처리할 컬럼이 없는 경우에 대한 처리 (예: 빈 데이터프레임 반환)
+    //         annualReturns = df;
+    //     }
+    
+    //     return annualReturns;
+    // }
+
     public Dataset<Row> calculateAnnualReturn(Dataset<Row> df) {
         // 컬럼명 리스트 가져오기
         // aggregatedColumns: Map<String, Column>를 생성하는 부분
@@ -325,12 +383,16 @@ public class BacktestingService {
                 col -> col.replace("daily_ret", "annual_ret"),  // 컬럼명 변경
                 col -> functions.avg(col).multiply(365)           // 평균 계산 후 365 곱하기
             ));
-
-        // Map의 값을 Column 배열로 변환 (alias 적용)
-        Column[] aggColumns = aggregatedColumns.entrySet().stream()
-            .map(entry -> entry.getValue().alias(entry.getKey()))
+    
+        // Map의 키를 알파벳 순으로 정렬
+        List<String> sortedKeys = new ArrayList<>(aggregatedColumns.keySet());
+        Collections.sort(sortedKeys);
+    
+        // 정렬된 키 순서대로 Column 배열을 생성
+        Column[] aggColumns = sortedKeys.stream()
+            .map(key -> aggregatedColumns.get(key).alias(key))
             .toArray(Column[]::new);
-
+    
         // agg() 메서드는 varargs 형식으로 받으므로, 첫 번째 원소와 나머지 원소들을 분리하여 전달합니다.
         Dataset<Row> annualReturns;
         if (aggColumns.length > 0) {
@@ -342,7 +404,5 @@ public class BacktestingService {
     
         return annualReturns;
     }
-
     
-
 }

@@ -76,7 +76,8 @@ public class BacktestingController {
         // 각 티커에 대한 그래프를 저장할 리스트
         List<OHLCData> allOhlcData = new ArrayList<>();
         List<String> graphs = new ArrayList<>();
-        List<List<Map<String,Object>>> backTestedResult = new ArrayList<>();
+        List<List<Map<String,Object>>> backTestingHistory = new ArrayList<>();
+        List<List<Map<String,Object>>> backTestingResult = new ArrayList<>();
         
         // 각 티커에 대해 Binance API 데이터를 모으기
         for (String ticker : tickers) {
@@ -102,16 +103,17 @@ public class BacktestingController {
                     })
                     .collect(Collectors.toList());
 
-                List<Map<String, Object>> testResult = rsiBackTestedList.stream()
+                List<Map<String, Object>> testHistory = rsiBackTestedList.stream()
                     .filter(map -> map.get("buySignal") != null || map.get("sellSignal") != null)
                     .collect(Collectors.toList());
 
-                backTestedResult.add(testResult); 
+                backTestingHistory.add(testHistory); 
+                backTestingResult.add(backtestingService.runBackTestTrade(testHistory, 100000));
                 // for 문 위에다 
                 // result.add("")
                 
                 graphs.add(generateCandleChartBase64(symbol, parsedData));
-                allOhlcData.addAll(parsedData);  // 모든 데이터를 모음
+                allOhlcData.addAll(parsedData);  // 모든 데이터를 모음\
             }
         }
     
@@ -131,7 +133,9 @@ public class BacktestingController {
         result.put("message", "✅ 분석 완료");
         // 그래프 결과 리스트에 추가
         result.put("graphs", graphs);
-        result.put("backtestresult", backTestedResult);
+        result.put("backTestHistory", backTestingHistory);
+        result.put("backTestResults", backTestingResult);
+        // result.put("backtestresult", backTestingResult);
         return result;
     }
 

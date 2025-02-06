@@ -5,6 +5,10 @@ import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.expression.Lists;
+
+import shaded.parquet.it.unimi.dsi.fastutil.Hash;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.linear.MatrixUtils;
@@ -349,32 +353,6 @@ public class BacktestingService {
         return covarianceMatrix;
     }
 
-    // public Dataset<Row> calculateAnnualReturn(Dataset<Row> df) {
-    //     // 컬럼명 리스트 가져오기
-    //     // aggregatedColumns: Map<String, Column>를 생성하는 부분
-    //     Map<String, Column> aggregatedColumns = Arrays.stream(df.columns())
-    //         .collect(Collectors.toMap(
-    //             col -> col.replace("daily_ret", "annual_ret"),  // 컬럼명 변경
-    //             col -> functions.avg(col).multiply(365)           // 평균 계산 후 365 곱하기
-    //         ));
-
-    //     // Map의 값을 Column 배열로 변환 (alias 적용)
-    //     Column[] aggColumns = aggregatedColumns.entrySet().stream()
-    //         .map(entry -> entry.getValue().alias(entry.getKey()))
-    //         .toArray(Column[]::new);
-
-    //     // agg() 메서드는 varargs 형식으로 받으므로, 첫 번째 원소와 나머지 원소들을 분리하여 전달합니다.
-    //     Dataset<Row> annualReturns;
-    //     if (aggColumns.length > 0) {
-    //         annualReturns = df.agg(aggColumns[0], Arrays.copyOfRange(aggColumns, 1, aggColumns.length));
-    //     } else {
-    //         // 처리할 컬럼이 없는 경우에 대한 처리 (예: 빈 데이터프레임 반환)
-    //         annualReturns = df;
-    //     }
-    
-    //     return annualReturns;
-    // }
-
     public Dataset<Row> calculateAnnualReturn(Dataset<Row> df) {
         // 컬럼명 리스트 가져오기
         // aggregatedColumns: Map<String, Column>를 생성하는 부분
@@ -405,4 +383,40 @@ public class BacktestingService {
         return annualReturns;
     }
     
+    public static List<Map<String, Object>> runBackTestTrade(List<Map<String, Object>> testHistory, double current) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        Trade trade = new Trade(current);
+    
+        for (Map<String, Object> entry : testHistory) {
+            Map<String, Object> processedEntry = new HashMap<>(entry);
+            double RSI = (double) entry.get("rsi");
+    
+            if (RSI < 20) {
+                if (trade.getCurrent() > 10) {
+                    trade.setTradePrice((double) entry.get("tradePrice"));
+                    trade.setTickerCount(trade.getCurrent() / trade.getTradePrice());
+                    trade.setCurrent(0);
+                }
+            } else if (RSI > 80) {
+                if (trade.getTickerCount() > 0) {
+                    trade.setCurrent(trade.getTickerCount() * (double) entry.get("tradePrice"));
+                    trade.setTradePrice((double) entry.get("tradePrice"));
+                    trade.setTickerCount(0);
+                }
+            }
+    
+            // trade 객체를 Map으로 변환하여 저장
+            Map<String, Object> tradeInfo = new HashMap<>();
+            tradeInfo.put("current", trade.getCurrent());
+            tradeInfo.put("tickerCount", trade.getTickerCount());
+            tradeInfo.put("tradePrice", trade.getTradePrice());
+    
+            processedEntry.put("history", tradeInfo);
+            result.add(processedEntry);
+        }
+    
+        return result;
+    }
+
+
 }

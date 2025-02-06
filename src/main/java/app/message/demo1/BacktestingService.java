@@ -20,6 +20,8 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
+import static org.apache.spark.sql.functions.log;
+
 // import java.awt.List;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -387,10 +389,9 @@ public class BacktestingService {
     public static List<Map<String, Object>> runBackTestTrade(List<Map<String, Object>> testHistory, double current) {
         List<Map<String, Object>> result = new ArrayList<>();
         Trade trade = new Trade(current);
-    
+            
         for (Map<String, Object> entry : testHistory) {
-            Map<String, Object> processedEntry = new HashMap<>();
-            double RSI = (double) entry.get("rsi");
+                        double RSI = (double) entry.get("rsi");
     
             if (RSI < 20) {
                 if (trade.getCurrent() > 10) {
@@ -411,29 +412,31 @@ public class BacktestingService {
             tradeInfo.put("current", trade.getCurrent());
             tradeInfo.put("tickerCount", trade.getTickerCount());
             tradeInfo.put("tradePrice", trade.getTradePrice());
-    
-            processedEntry.put("history", tradeInfo);
-            result.add(processedEntry);
+            result.add(tradeInfo);
         }
-    
         return result;
     }
 
-    public static Double calculateFinalValue(List<Map<String, Object>> testResult, List<OHLCData> parsedData) {
+    public static Map<String, Double> calculateFinalValue(List<Map<String, Object>> testResult, List<OHLCData> parsedData) {
         
         OHLCData finalData = parsedData.get(parsedData.size() -1);
         double finalTradePrice = finalData.getTradePrice();
 
+        Map<String, Double> result = new HashMap<>();
         double finalValue = 0;
-
+        
         Map<String, Object> lastElement = testResult.get(testResult.size() - 1);
+        String ticker = finalData.getTicker();
         if ((double) lastElement.get("tickerCount") != 0 ) {
             finalValue = (double) lastElement.get("tickerCount") * finalTradePrice + (double) lastElement.get("current");
         } else {
             finalValue = (double) lastElement.get("current");
         }
         
-        return finalValue;
+        result.put(ticker, finalValue);
+
+        return result;
     }
+
 
 }

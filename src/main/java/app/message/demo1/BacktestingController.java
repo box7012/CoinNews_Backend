@@ -78,7 +78,7 @@ public class BacktestingController {
         List<String> graphs = new ArrayList<>();
         List<List<Map<String,Object>>> backTestingHistory = new ArrayList<>();
         List<List<Map<String,Object>>> backTestingResult = new ArrayList<>();
-        List<Double> finalValueList = new ArrayList<>();
+        List<Map<String, Double>> finalValueList = new ArrayList<>();
         
         // 각 티커에 대해 Binance API 데이터를 모으기
         for (String ticker : tickers) {
@@ -139,7 +139,7 @@ public class BacktestingController {
         result.put("graphs", graphs);
         result.put("backTestHistory", backTestingHistory);
         result.put("backTestResults", backTestingResult);
-        // result.put("backtestresult", backTestingResult);
+        result.put("finalValueList", finalValueList);
         return result;
     }
 

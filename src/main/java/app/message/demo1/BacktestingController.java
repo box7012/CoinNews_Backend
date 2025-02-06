@@ -78,6 +78,7 @@ public class BacktestingController {
         List<String> graphs = new ArrayList<>();
         List<List<Map<String,Object>>> backTestingHistory = new ArrayList<>();
         List<List<Map<String,Object>>> backTestingResult = new ArrayList<>();
+        List<Double> finalValueList = new ArrayList<>();
         
         // 각 티커에 대해 Binance API 데이터를 모으기
         for (String ticker : tickers) {
@@ -108,7 +109,10 @@ public class BacktestingController {
                     .collect(Collectors.toList());
 
                 backTestingHistory.add(testHistory); 
-                backTestingResult.add(backtestingService.runBackTestTrade(testHistory, 100000));
+                // 지금 현금 100000 으로 시작하지만, 이거는 리퀘스트에서 값 추출해서 넣어야함
+                List<Map<String, Object>> testResult = backtestingService.runBackTestTrade(testHistory, 100000);
+                backTestingResult.add(testResult);
+                finalValueList.add(backtestingService.calculateFinalValue(testResult, parsedData));
                 // for 문 위에다 
                 // result.add("")
                 

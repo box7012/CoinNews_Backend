@@ -23,6 +23,7 @@ import org.apache.spark.sql.types.StructType;
 // import java.awt.List;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.sql.Date;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;
@@ -388,7 +389,7 @@ public class BacktestingService {
         Trade trade = new Trade(current);
     
         for (Map<String, Object> entry : testHistory) {
-            Map<String, Object> processedEntry = new HashMap<>(entry);
+            Map<String, Object> processedEntry = new HashMap<>();
             double RSI = (double) entry.get("rsi");
     
             if (RSI < 20) {
@@ -418,5 +419,21 @@ public class BacktestingService {
         return result;
     }
 
+    public static Double calculateFinalValue(List<Map<String, Object>> testResult, List<OHLCData> parsedData) {
+        
+        OHLCData finalData = parsedData.get(parsedData.size() -1);
+        double finalTradePrice = finalData.getTradePrice();
+
+        double finalValue = 0;
+
+        Map<String, Object> lastElement = testResult.get(testResult.size() - 1);
+        if ((double) lastElement.get("tickerCount") != 0 ) {
+            finalValue = (double) lastElement.get("tickerCount") * finalTradePrice + (double) lastElement.get("current");
+        } else {
+            finalValue = (double) lastElement.get("current");
+        }
+        
+        return finalValue;
+    }
 
 }

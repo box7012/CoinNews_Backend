@@ -26,6 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
+import static org.apache.spark.sql.functions.explode;
+
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -72,7 +74,9 @@ public class BacktestingController {
         // 요청된 티커 목록 가져오기
         List<String> tickers = (List<String>) requestData.get("tickers");
         String startDate = (String) requestData.get("startDate");
+        log.info("startDate" + startDate);
         String endDate = (String) requestData.get("endDate");
+        log.info("endDate" + endDate);
 
         // 알파벳순 정렬
         Collections.sort(tickers);
@@ -96,18 +100,29 @@ public class BacktestingController {
                 // 데이터를 파싱해서 리스트에 저장
                 List<OHLCData> parsedData = parseBinanceData(ohlcData, ticker);
 
-                if (startDate != null && endDate != null) {
-                    startDate = dateToMilliSec(startDate);
-
+                long sD, eD;
+                if (startDate != null && !startDate.isEmpty() && endDate != null && !endDate.isEmpty()) {
+                    sD = dateToMilliSec(startDate);
+                    eD = dateToMilliSec(endDate);
+                } else { // 하나라도 없으면 그냥 오늘, 100일전으로 바꿈
+                    LocalDate today = LocalDate.now();
+                    LocalDate hundredDaysAgo = today.minusDays(100);
+                    long todayTimestamp = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                    long hundredDaysAgoTimestamp = hundredDaysAgo.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                    sD = hundredDaysAgoTimestamp;
+                    eD = todayTimestamp;
                 }
-                
-                
-
-                
+                log.info("sD_is :" + sD);
+                log.info("eD_is :" + eD);
+                // 날짜로 자른 데이터
+                List<OHLCData> betweenDateParsedData = parsedData.stream()
+                    .filter(data -> data.getTime() >= sD && data.getTime() <= eD)
+                    .collect(Collectors.toList());
+                              
                 // parsedData 데이터와, client에서 보내온 데이터를 가지고 백테스팅을 진행,
                 // 진행한 결과데이터를 generateCandleChartBase64에 넘겨줌 - 여기엔 매수, 매도정보가 들어있음
                 // 그래프용 데이터는 넘겨주고, 이걸 가지고 계산을 한 결과도 따로 엑셀 표처럼 보여줄 예정
-                Dataset<Row> rsiBackTestedDf = backTester.backTestingRSIDataset(parsedData);
+                Dataset<Row> rsiBackTestedDf = backTester.backTestingRSIDataset(betweenDateParsedData);
                 List<Map<String, Object>> rsiBackTestedList = rsiBackTestedDf.collectAsList().stream()
                     .map(row -> {
                         Map<String, Object> map = new HashMap<>();
@@ -126,12 +141,12 @@ public class BacktestingController {
                 // 지금 현금 100000 으로 시작하지만, 이거는 리퀘스트에서 값 추출해서 넣어야함
                 List<Map<String, Object>> testResult = backtestingService.runBackTestTrade(testHistory, 100000);
                 backTestingResult.add(testResult);
-                finalValueList.add(backtestingService.calculateFinalValue(testResult, parsedData));
+                finalValueList.add(backtestingService.calculateFinalValue(testResult, betweenDateParsedData));
                 // for 문 위에다 
                 // result.add("")
                 
-                graphs.add(generateCandleChartBase64(symbol, parsedData));
-                allOhlcData.addAll(parsedData);  // 모든 데이터를 모음\
+                graphs.add(generateCandleChartBase64(symbol, betweenDateParsedData));
+                allOhlcData.addAll(betweenDateParsedData);  // 모든 데이터를 모음\
             }
         }
     
@@ -320,12 +335,9 @@ public class BacktestingController {
         return ticker;  // "USDT"가 없으면 그대로 반환
     }
 
-    private Long dateToMilliSec(String dateString) {
-
+    private long dateToMilliSec(String dateString) {
         LocalDate localDate = LocalDate.parse(dateString);
-        Long timestamp = localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
-
-        return timestamp;
+        return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
 }

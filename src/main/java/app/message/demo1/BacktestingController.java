@@ -7,6 +7,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
@@ -25,8 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-
-import static org.apache.spark.sql.functions.explode;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -74,9 +74,13 @@ public class BacktestingController {
         // 요청된 티커 목록 가져오기
         List<String> tickers = (List<String>) requestData.get("tickers");
         String startDate = (String) requestData.get("startDate");
-        log.info("startDate" + startDate);
         String endDate = (String) requestData.get("endDate");
-        log.info("endDate" + endDate);
+        List<Map<String, String>> strategyList = (List<Map<String, String>>) requestData.get("strategies");
+        List<String> selectedStrategyList = strategyList.stream()
+            .map(strategy -> strategy.get("selected"))
+            .collect(Collectors.toList());
+
+        Map<String, Map<String, String>> conditions = (Map<String, Map<String, String>>) requestData.get("parameters");
 
         // 알파벳순 정렬
         Collections.sort(tickers);
@@ -88,7 +92,10 @@ public class BacktestingController {
         List<List<Map<String,Object>>> backTestingResult = new ArrayList<>();
         List<Map<String, Double>> finalValueList = new ArrayList<>();
         
-        
+        Map<String, BiFunction<List<OHLCData>, Map<String, String>, Dataset<Row>>> strategyMap = new HashMap<>();
+        strategyMap.put("RSI", backTester::backTestingRSIDataset);
+        strategyMap.put("BollingerBand", backTester::backTestingRSIDataset);
+                       
         // 각 티커에 대해 Binance API 데이터를 모으기
         for (String ticker : tickers) {
             String symbol = convertToBinanceSymbol(ticker);
@@ -112,28 +119,52 @@ public class BacktestingController {
                     sD = hundredDaysAgoTimestamp;
                     eD = todayTimestamp;
                 }
-                log.info("sD_is :" + sD);
-                log.info("eD_is :" + eD);
+
                 // 날짜로 자른 데이터
                 List<OHLCData> betweenDateParsedData = parsedData.stream()
                     .filter(data -> data.getTime() >= sD && data.getTime() <= eD)
                     .collect(Collectors.toList());
-                              
-                // parsedData 데이터와, client에서 보내온 데이터를 가지고 백테스팅을 진행,
-                // 진행한 결과데이터를 generateCandleChartBase64에 넘겨줌 - 여기엔 매수, 매도정보가 들어있음
-                // 그래프용 데이터는 넘겨주고, 이걸 가지고 계산을 한 결과도 따로 엑셀 표처럼 보여줄 예정
-                Dataset<Row> rsiBackTestedDf = backTester.backTestingRSIDataset(betweenDateParsedData);
-                List<Map<String, Object>> rsiBackTestedList = rsiBackTestedDf.collectAsList().stream()
-                    .map(row -> {
-                        Map<String, Object> map = new HashMap<>();
-                        for (String field : row.schema().fieldNames()) {
-                            map.put(field, row.getAs(field));
-                        }
-                        return map;
-                    })
-                    .collect(Collectors.toList());
 
-                List<Map<String, Object>> testHistory = rsiBackTestedList.stream()
+                List<Dataset<Row>> signalWithStrategy = new ArrayList<>();
+                Map<String, String> condition = new HashMap<>();
+                
+                for (String strategy : selectedStrategyList) {
+                    BiFunction<List<OHLCData>, Map<String, String>, Dataset<Row>> function = strategyMap.get(strategy);
+                    if (function != null) {
+                        condition = conditions.get(strategy);
+                        Dataset<Row> resultDf = function.apply(betweenDateParsedData, condition);
+                        signalWithStrategy.add(resultDf);
+                    }
+                }
+                Dataset<Row> finalResultDf;
+                List<Map<String, Object>> signalAddedList = new ArrayList<>(); 
+                // 병합할 데이터가 있는지 확인
+                if (!signalWithStrategy.isEmpty()) {
+                    // 첫 번째 DF를 기준으로 함
+                    finalResultDf = signalWithStrategy.get(0);
+
+                    // 나머지 DF를 순차적으로 병합 (full_outer join 사용)
+                    for (int i = 1; i < signalWithStrategy.size(); i++) {
+                        finalResultDf = finalResultDf.join(signalWithStrategy.get(i), 
+                                                        "timestamp", // 공통 기준 컬럼
+                                                        "full_outer"); // 컬럼이 다를 경우 자동 추가
+                    }
+
+                    // Dataset<Row> → List<Map<String, Object>> 변환
+                    signalAddedList = finalResultDf.collectAsList().stream()
+                        .map(row -> {
+                            Map<String, Object> map = new HashMap<>();
+                            for (String field : row.schema().fieldNames()) {
+                                map.put(field, row.getAs(field));
+                            }
+                            return map;
+                        })
+                        .collect(Collectors.toList());
+                }
+                
+                
+
+                List<Map<String, Object>> testHistory = signalAddedList.stream()
                     .filter(map -> map.get("buySignal") != null || map.get("sellSignal") != null)
                     .collect(Collectors.toList());
 
@@ -147,6 +178,7 @@ public class BacktestingController {
                 
                 graphs.add(generateCandleChartBase64(symbol, betweenDateParsedData));
                 allOhlcData.addAll(betweenDateParsedData);  // 모든 데이터를 모음\
+
             }
         }
     
@@ -169,6 +201,7 @@ public class BacktestingController {
         result.put("backTestHistory", backTestingHistory);
         result.put("backTestResults", backTestingResult);
         result.put("finalValueList", finalValueList);
+        
         return result;
     }
 

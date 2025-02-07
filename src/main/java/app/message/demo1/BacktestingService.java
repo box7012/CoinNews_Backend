@@ -391,21 +391,34 @@ public class BacktestingService {
         Trade trade = new Trade(current);
             
         for (Map<String, Object> entry : testHistory) {
-                        double RSI = (double) entry.get("rsi");
-    
-            if (RSI < 20) {
+            
+            if (entry.get("buySignal") != null) {
                 if (trade.getCurrent() > 10) {
                     trade.setTradePrice((double) entry.get("tradePrice"));
                     trade.setTickerCount(trade.getCurrent() / trade.getTradePrice());
                     trade.setCurrent(0);
                 }
-            } else if (RSI > 80) {
+            } else if (entry.get("sellSignal") != null) {
                 if (trade.getTickerCount() > 0) {
                     trade.setCurrent(trade.getTickerCount() * (double) entry.get("tradePrice"));
                     trade.setTradePrice((double) entry.get("tradePrice"));
                     trade.setTickerCount(0);
                 }
             }
+
+            // if (RSI < 20) {
+            //     if (trade.getCurrent() > 10) {
+            //         trade.setTradePrice((double) entry.get("tradePrice"));
+            //         trade.setTickerCount(trade.getCurrent() / trade.getTradePrice());
+            //         trade.setCurrent(0);
+            //     }
+            // } else if (RSI > 80) {
+            //     if (trade.getTickerCount() > 0) {
+            //         trade.setCurrent(trade.getTickerCount() * (double) entry.get("tradePrice"));
+            //         trade.setTradePrice((double) entry.get("tradePrice"));
+            //         trade.setTickerCount(0);
+            //     }
+            // }
     
             // trade 객체를 Map으로 변환하여 저장
             Map<String, Object> tradeInfo = new HashMap<>();

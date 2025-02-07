@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import static org.apache.spark.sql.functions.*;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BackTester {
@@ -22,7 +23,48 @@ public class BackTester {
         this.spark = spark;
     }
 
-    public Dataset<Row> backTestingRSIDataset(List<OHLCData> dataset) {
+    public Dataset<Row> backTestingRSIDataset(List<OHLCData> dataset, Map<String, String> condition) {
+       // OHLCData 리스트를 DataFrame으로 변환
+       
+       Dataset<Row> df = spark.createDataFrame(dataset, OHLCData.class);
+       Double buyCriterion = Double.parseDouble(condition.get("buy"));
+       Double sellCriterion = Double.parseDouble(condition.get("sell"));
+    
+       // 전체 데이터에 대해 timestamp 기준 오름차순 정렬
+       df = df.orderBy("timestamp");
+    
+       // 전일 대비 가격 변화 계산
+       df = df.withColumn("change", 
+               col("tradePrice").minus(lag("tradePrice", 1).over(Window.orderBy("timestamp"))));
+    
+       // 상승(gain)과 하락(loss) 분리
+       df = df.withColumn("gain", when(col("change").gt(0), col("change")).otherwise(lit(0)))
+              .withColumn("loss", when(col("change").lt(0), col("change").multiply(-1)).otherwise(lit(0)));
+    
+       // 최근 14일의 데이터에 대해 평균 상승과 평균 하락 계산
+       WindowSpec windowSpec = Window.orderBy("timestamp").rowsBetween(-13, 0);
+       df = df.withColumn("avgGain", avg(col("gain")).over(windowSpec))
+              .withColumn("avgLoss", avg(col("loss")).over(windowSpec));
+    
+       // RS (Relative Strength) 계산
+       df = df.withColumn("rs", col("avgGain").divide(col("avgLoss")));
+    
+       // RSI 계산
+       df = df.withColumn("rsi", 
+               when(col("avgLoss").equalTo(0), lit(100))
+               .otherwise(lit(100).minus(lit(100).divide(col("rs").plus(1)))));
+    
+       // RSI가 0 또는 100인 데이터 필터링
+       df = df.filter(col("rsi").notEqual(0).and(col("rsi").notEqual(100)));
+    
+       // 매수 및 매도 신호 설정
+       df = df.withColumn("buySignal", when(col("rsi").leq(buyCriterion), col("tradePrice")).otherwise(lit(null)))
+              .withColumn("sellSignal", when(col("rsi").geq(sellCriterion), col("tradePrice")).otherwise(lit(null)));
+    
+       return df;
+    }
+
+    public Dataset<Row> backTestingBollingerBandDataset(List<OHLCData> dataset, Map<String, String> condition) {
        // OHLCData 리스트를 DataFrame으로 변환
        Dataset<Row> df = spark.createDataFrame(dataset, OHLCData.class);
     
@@ -59,4 +101,5 @@ public class BackTester {
     
        return df;
     }
+
 }

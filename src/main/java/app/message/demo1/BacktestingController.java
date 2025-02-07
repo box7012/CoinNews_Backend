@@ -32,6 +32,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
@@ -69,6 +71,8 @@ public class BacktestingController {
     
         // 요청된 티커 목록 가져오기
         List<String> tickers = (List<String>) requestData.get("tickers");
+        String startDate = (String) requestData.get("startDate");
+        String endDate = (String) requestData.get("endDate");
 
         // 알파벳순 정렬
         Collections.sort(tickers);
@@ -80,6 +84,7 @@ public class BacktestingController {
         List<List<Map<String,Object>>> backTestingResult = new ArrayList<>();
         List<Map<String, Double>> finalValueList = new ArrayList<>();
         
+        
         // 각 티커에 대해 Binance API 데이터를 모으기
         for (String ticker : tickers) {
             String symbol = convertToBinanceSymbol(ticker);
@@ -90,6 +95,15 @@ public class BacktestingController {
             if (ohlcData != null) {
                 // 데이터를 파싱해서 리스트에 저장
                 List<OHLCData> parsedData = parseBinanceData(ohlcData, ticker);
+
+                if (startDate != null && endDate != null) {
+                    startDate = dateToMilliSec(startDate);
+
+                }
+                
+                
+
+                
                 // parsedData 데이터와, client에서 보내온 데이터를 가지고 백테스팅을 진행,
                 // 진행한 결과데이터를 generateCandleChartBase64에 넘겨줌 - 여기엔 매수, 매도정보가 들어있음
                 // 그래프용 데이터는 넘겨주고, 이걸 가지고 계산을 한 결과도 따로 엑셀 표처럼 보여줄 예정
@@ -306,7 +320,14 @@ public class BacktestingController {
         return ticker;  // "USDT"가 없으면 그대로 반환
     }
 
+    private Long dateToMilliSec(String dateString) {
 
+        LocalDate localDate = LocalDate.parse(dateString);
+        Long timestamp = localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
+        return timestamp;
+    }
 
 }
+
+

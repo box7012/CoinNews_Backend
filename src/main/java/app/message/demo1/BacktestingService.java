@@ -406,20 +406,6 @@ public class BacktestingService {
                 }
             }
 
-            // if (RSI < 20) {
-            //     if (trade.getCurrent() > 10) {
-            //         trade.setTradePrice((double) entry.get("tradePrice"));
-            //         trade.setTickerCount(trade.getCurrent() / trade.getTradePrice());
-            //         trade.setCurrent(0);
-            //     }
-            // } else if (RSI > 80) {
-            //     if (trade.getTickerCount() > 0) {
-            //         trade.setCurrent(trade.getTickerCount() * (double) entry.get("tradePrice"));
-            //         trade.setTradePrice((double) entry.get("tradePrice"));
-            //         trade.setTickerCount(0);
-            //     }
-            // }
-    
             // trade 객체를 Map으로 변환하여 저장
             Map<String, Object> tradeInfo = new HashMap<>();
             tradeInfo.put("current", trade.getCurrent());

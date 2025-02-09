@@ -173,11 +173,10 @@ public class BacktestingController {
                 List<Map<String, Object>> testResult = backtestingService.runBackTestTrade(testHistory, 100000);
                 backTestingResult.add(testResult);
                 finalValueList.add(backtestingService.calculateFinalValue(testResult, betweenDateParsedData));
-                // for 문 위에다 
-                // result.add("")
-                
+
                 graphs.add(generateCandleChartBase64(symbol, betweenDateParsedData));
-                allOhlcData.addAll(betweenDateParsedData);  // 모든 데이터를 모음\
+                // 모든 데이터를 모음
+                allOhlcData.addAll(betweenDateParsedData);  
 
             }
         }

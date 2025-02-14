@@ -7,8 +7,8 @@ public class OHLCData {
     private double lowPrice;
     private double tradePrice;
     private String ticker;
-    private Double buySignal;  // 매수 신호 (nullable)
-    private Double sellSignal; // 매도 신호 (nullable)
+    private Boolean buySignal;  // 매수 신호 (Boolean)
+    private Boolean sellSignal; // 매도 신호 (Boolean)
 
     public OHLCData(long timestamp, double openingPrice, double highPrice, double lowPrice, double tradePrice, String ticker) {
         this.timestamp = timestamp;
@@ -17,16 +17,16 @@ public class OHLCData {
         this.lowPrice = lowPrice;
         this.tradePrice = tradePrice;
         this.ticker = ticker;
-        this.buySignal = null;  // 기본값 null
-        this.sellSignal = null; // 기본값 null
+        this.buySignal = true;  // 기본값 true
+        this.sellSignal = true; // 기본값 true
     }
 
     // Getter 및 Setter 추가
-    public Double getBuySignal() { return buySignal; }
-    public void setBuySignal(Double buySignal) { this.buySignal = buySignal; }
+    public Boolean getBuySignal() { return buySignal; }
+    public void setBuySignal(Boolean buySignal) { this.buySignal = buySignal; }
 
-    public Double getSellSignal() { return sellSignal; }
-    public void setSellSignal(Double sellSignal) { this.sellSignal = sellSignal; }
+    public Boolean getSellSignal() { return sellSignal; }
+    public void setSellSignal(Boolean sellSignal) { this.sellSignal = sellSignal; }
 
     // 기존 getter들
     public long getTimestamp() { return timestamp; }

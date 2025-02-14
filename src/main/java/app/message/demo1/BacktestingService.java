@@ -5,9 +5,6 @@ import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.expression.Lists;
-
-import shaded.parquet.it.unimi.dsi.fastutil.Hash;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -20,12 +17,11 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
-import static org.apache.spark.sql.functions.log;
 
 // import java.awt.List;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.sql.Date;
+
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;

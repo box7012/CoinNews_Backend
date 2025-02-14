@@ -131,14 +131,19 @@ public class BacktestingController {
                 List<Dataset<Row>> signalWithStrategy = new ArrayList<>();
                 Map<String, String> condition = new HashMap<>();
                 
+                
                 for (String strategy : selectedStrategyList) {
                     BiFunction<List<OHLCData>, Map<String, String>, Dataset<Row>> function = strategyMap.get(strategy);
                     if (function != null) {
                         condition = conditions.get(strategy);
+                        // check!
                         Dataset<Row> resultDf = function.apply(betweenDateParsedData, condition);
                         signalWithStrategy.add(resultDf);
                     }
                 }
+
+                
+
                 Dataset<Row> finalResultDf;
                 List<Map<String, Object>> signalAddedList = new ArrayList<>(); 
                 // 병합할 데이터가 있는지 확인
@@ -165,11 +170,16 @@ public class BacktestingController {
                         .collect(Collectors.toList());
                 }
                 
-                
-
+                //check - 만약 거래가 일어나지 않으면 에러생김 예외처리가 필요할거같고
                 List<Map<String, Object>> testHistory = signalAddedList.stream()
-                    .filter(map -> map.get("buySignal") != null || map.get("sellSignal") != null)
+                    .filter(map -> Boolean.TRUE.equals(map.get("buySignal")) || Boolean.TRUE.equals(map.get("sellSignal")))
                     .collect(Collectors.toList());
+
+                // for (Map<String, Object> data : testHistory) {
+                //     System.out.println(data);
+                // }
+                // log.info("goodgood");
+
 
                 backTestingHistory.add(testHistory); 
                 // 지금 현금 100000 으로 시작하지만, 이거는 리퀘스트에서 값 추출해서 넣어야함
@@ -177,7 +187,7 @@ public class BacktestingController {
                 backTestingResult.add(testResult);
                 finalValueList.add(backtestingService.calculateFinalValue(testResult, betweenDateParsedData));
 
-                graphs.add(generateCandleChartBase64(symbol, betweenDateParsedData));
+                graphs.add(generateCandleChartBase64(symbol, betweenDateParsedData, testHistory));
                 // 모든 데이터를 모음
                 allOhlcData.addAll(betweenDateParsedData);  
 
@@ -247,7 +257,7 @@ public class BacktestingController {
         }
     }
 
-    private String generateCandleChartBase64(String symbol, List<OHLCData> ohlcDataList) {
+    private String generateCandleChartBase64(String symbol, List<OHLCData> ohlcDataList, List<Map<String, Object>> testHistory) {
         if (ohlcDataList == null || ohlcDataList.isEmpty()) {
             return null;
         }
@@ -303,52 +313,8 @@ public class BacktestingController {
         // Y축 범위를 데이터의 최소값과 최대값에 맞게 설정
         double margin = (maxPrice - minPrice) * 0.1; // 10% 여유 공간 추가
         plot.getRangeAxis().setRange(new Range(minPrice - margin, maxPrice + margin));
-    
-        // 🔵 파란색 삼각형(매수) 추가 (마지막 데이터 기준)
-        if (!ohlcDataList.isEmpty()) {
-            int lastIndex = ohlcDataList.size() - 1;
-            OHLCData lastData = ohlcDataList.get(lastIndex);
-            
-            double x = lastData.getTimestamp(); // X축 (시간)
-            double y = lastData.getTradePrice(); // Y축 (가격)
 
-            double sizeX = 1000 * 60 * 60; // X축 크기 (예: 1시간 단위)
-            double sizeY = (maxPrice - minPrice) * 0.02; // Y축 크기 (2% 비율)
-
-            double[] triangle = {
-                x, y + sizeY,  // 꼭대기
-                x - 20 * sizeX, y - (sizeY / 2),  // 왼쪽 아래
-                x + 20 * sizeX, y -  (sizeY / 2)  // 오른쪽 아래
-            };
-
-            XYPolygonAnnotation annotation = new XYPolygonAnnotation(
-                triangle, new BasicStroke(1.5f), Color.BLUE, Color.BLUE
-            );
-            plot.addAnnotation(annotation);
-        }
-
-        // 🟡 노란색 삼각형(매도) 추가 (마지막 데이터 기준)
-        if (!ohlcDataList.isEmpty()) {
-            int lastIndex = ohlcDataList.size() - 1;
-            OHLCData lastData = ohlcDataList.get(lastIndex);
-            
-            double x = lastData.getTimestamp(); // X축 (시간)
-            double y = lastData.getOpeningPrice(); // Y축 (가격)
-
-            double sizeX = 1000 * 60 * 60; // X축 크기 (예: 1시간 단위)
-            double sizeY = (maxPrice - minPrice) * 0.02; // Y축 크기 (2% 비율)
-
-            double[] triangle = {
-                x, y - sizeY,  // 꼭대기
-                x - 20 * sizeX, y + (sizeY / 2),  // 왼쪽 아래
-                x + 20 * sizeX, y +  (sizeY / 2)  // 오른쪽 아래
-            };
-
-            XYPolygonAnnotation annotation = new XYPolygonAnnotation(
-                triangle, new BasicStroke(1.5f), Color.YELLOW, Color.YELLOW
-            );
-            plot.addAnnotation(annotation);
-        }
+        addTradeSignals(plot, minPrice, maxPrice, testHistory);
 
         // 차트를 BufferedImage로 변환
         BufferedImage image = chart.createBufferedImage(800, 600);
@@ -363,6 +329,7 @@ public class BacktestingController {
             return null;
         }
     }
+
     public static String extractTicker(String ticker) {
         if (ticker != null && ticker.endsWith("USDT")) {
             return ticker.substring(0, ticker.length() - 4);  // "USDT"를 제거하고 반환
@@ -375,6 +342,38 @@ public class BacktestingController {
         return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
+    private void addTradeSignals(XYPlot plot, double minPrice, double maxPrice, List<Map<String, Object>> testHistory) {
+        double sizeX = 1000 * 60 * 30; // X축 크기 (예: 30분 단위)
+        double sizeY = (maxPrice - minPrice) * 0.04; // Y축 크기 (5% 비율, 삼각형 크기 확대) 100개니까?
+        
+        for (Map<String, Object> entry : testHistory) {
+            long x = ((Number) entry.get("timestamp")).longValue(); // timestamp를 long으로 변환
+            double y = ((Number) entry.get("tradePrice")).doubleValue(); // tradePrice를 double로 변환
+            double highPrice = ((Number) entry.get("highPrice")).doubleValue(); // highPrice 값 가져오기
+            double lowPrice = ((Number) entry.get("lowPrice")).doubleValue(); // lowPrice 값 가져오기
+            
+            // 매수 신호 🔵 (lowPrice에 표시)
+            if (Boolean.TRUE.equals(entry.get("buySignal"))) {
+                double[] triangle = {
+                    x, lowPrice ,  // 아래쪽 꼭대기 (lowPrice에서 5% 아래)
+                    x - 30 * sizeX, lowPrice - sizeY / 2,  // 왼쪽 아래
+                    x + 30 * sizeX, lowPrice - sizeY / 2   // 오른쪽 아래
+                };
+                plot.addAnnotation(new XYPolygonAnnotation(triangle, new BasicStroke(2f), Color.BLUE, Color.BLUE)); // 삼각형 크기 키우기
+            }
+        
+            // 매도 신호 🟡 (highPrice에 표시)
+            if (Boolean.TRUE.equals(entry.get("sellSignal"))) {
+                double[] triangle = {
+                    x, highPrice,  // 위쪽 꼭대기 (highPrice에서 5% 위)
+                    x - 30 * sizeX, highPrice + sizeY / 2,  // 왼쪽 아래
+                    x + 30 * sizeX, highPrice + sizeY / 2   // 오른쪽 아래
+                };
+                plot.addAnnotation(new XYPolygonAnnotation(triangle, new BasicStroke(2f), Color.YELLOW, Color.YELLOW)); // 삼각형 크기 키우기
+            }
+        }
+    }
+    
 }
 
 

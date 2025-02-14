@@ -94,7 +94,10 @@ public class BacktestingController {
         
         Map<String, BiFunction<List<OHLCData>, Map<String, String>, Dataset<Row>>> strategyMap = new HashMap<>();
         strategyMap.put("RSI", backTester::backTestingRSIDataset);
-        strategyMap.put("BollingerBand", backTester::backTestingRSIDataset);
+        strategyMap.put("Psychological Line", backTester::backTestingPSYDataset);
+        strategyMap.put("CCI", backTester::backTestingCCIDataset);
+        strategyMap.put("MACD", backTester::backTestingMACDDataset);
+        strategyMap.put("Bollinger Band", backTester::backTestingBollingerDataset);
                        
         // 각 티커에 대해 Binance API 데이터를 모으기
         for (String ticker : tickers) {

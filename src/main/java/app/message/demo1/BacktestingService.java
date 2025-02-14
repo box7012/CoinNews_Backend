@@ -386,26 +386,58 @@ public class BacktestingService {
         return annualReturns;
     }
     
+    // public static List<Map<String, Object>> runBackTestTrade(List<Map<String, Object>> testHistory, double current) {
+    //     List<Map<String, Object>> result = new ArrayList<>();
+    //     Trade trade = new Trade(current);
+            
+    //     for (Map<String, Object> entry : testHistory) {
+            
+    //         if (entry.get("buySignal") != null) {
+    //             if (trade.getCurrent() > 10) {
+    //                 trade.setTradePrice((double) entry.get("tradePrice"));
+    //                 trade.setTickerCount(trade.getCurrent() / trade.getTradePrice());
+    //                 trade.setCurrent(0);
+    //             }
+    //         } else if (entry.get("sellSignal") != null) {
+    //             if (trade.getTickerCount() > 0) {
+    //                 trade.setCurrent(trade.getTickerCount() * (double) entry.get("tradePrice"));
+    //                 trade.setTradePrice((double) entry.get("tradePrice"));
+    //                 trade.setTickerCount(0);
+    //             }
+    //         }
+
+    //         // trade 객체를 Map으로 변환하여 저장
+    //         Map<String, Object> tradeInfo = new HashMap<>();
+    //         tradeInfo.put("current", trade.getCurrent());
+    //         tradeInfo.put("tickerCount", trade.getTickerCount());
+    //         tradeInfo.put("tradePrice", trade.getTradePrice());
+    //         result.add(tradeInfo);
+    //     }
+    //     return result;
+    // }
     public static List<Map<String, Object>> runBackTestTrade(List<Map<String, Object>> testHistory, double current) {
         List<Map<String, Object>> result = new ArrayList<>();
         Trade trade = new Trade(current);
-            
+    
         for (Map<String, Object> entry : testHistory) {
             
-            if (entry.get("buySignal") != null) {
-                if (trade.getCurrent() > 10) {
+            // buySignal이 true일 경우
+            if (entry.get("buySignal") != null && (boolean) entry.get("buySignal")) {
+                if (trade.getCurrent() > 10) {  // 현재 잔고가 10 이상일 때만 매수
                     trade.setTradePrice((double) entry.get("tradePrice"));
                     trade.setTickerCount(trade.getCurrent() / trade.getTradePrice());
-                    trade.setCurrent(0);
+                    trade.setCurrent(0);  // 잔고 초기화
                 }
-            } else if (entry.get("sellSignal") != null) {
-                if (trade.getTickerCount() > 0) {
+            } 
+            // sellSignal이 true일 경우
+            else if (entry.get("sellSignal") != null && (boolean) entry.get("sellSignal")) {
+                if (trade.getTickerCount() > 0) {  // 보유 주식이 있을 경우만 매도
                     trade.setCurrent(trade.getTickerCount() * (double) entry.get("tradePrice"));
                     trade.setTradePrice((double) entry.get("tradePrice"));
-                    trade.setTickerCount(0);
+                    trade.setTickerCount(0);  // 주식 보유 수량 초기화
                 }
             }
-
+    
             // trade 객체를 Map으로 변환하여 저장
             Map<String, Object> tradeInfo = new HashMap<>();
             tradeInfo.put("current", trade.getCurrent());

@@ -14,14 +14,14 @@ import java.util.Map;
 @Service
 public class BackTester {
 
-    private final Log log = LogFactory.getLog(AuthController.class);
+       private final Log log = LogFactory.getLog(AuthController.class);
 
-    private final SparkSession spark;
-    
-    @Autowired
-    public BackTester(SparkSession spark) {
-        this.spark = spark;
-    }
+       private final SparkSession spark;
+       
+       @Autowired
+       public BackTester(SparkSession spark) {
+              this.spark = spark;
+       }
 
 //     public Dataset<Row> backTestingRSIDataset(List<OHLCData> dataset, Map<String, String> condition) {
 //        // OHLCData 리스트를 DataFrame으로 변환
@@ -178,7 +178,7 @@ public class BackTester {
        }
           
 
-       public Dataset<Row> backTestingBollingerDataset(List<OHLCData> dataset) {
+       public Dataset<Row> backTestingBollingerDataset(List<OHLCData> dataset, Map<String, String> condition) {
               Dataset<Row> df = spark.createDataFrame(dataset, OHLCData.class);
           
               df = df.orderBy("timestamp");
@@ -215,7 +215,7 @@ public class BackTester {
        }
           
 
-       public Dataset<Row> backTestingMACDDataset(List<OHLCData> dataset) {
+       public Dataset<Row> backTestingMACDDataset(List<OHLCData> dataset, Map<String, String> condition) {
               Dataset<Row> df = spark.createDataFrame(dataset, OHLCData.class);
           
               df = df.orderBy("timestamp");
@@ -253,5 +253,4 @@ public class BackTester {
               return df;
        }
           
-
 }

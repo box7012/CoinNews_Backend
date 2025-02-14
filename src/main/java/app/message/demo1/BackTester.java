@@ -85,21 +85,23 @@ public class BackTester {
        
               df = df.withColumn("rsi",
                      when(col("avgLoss").equalTo(0), lit(100))
-                     .otherwise(lit(100).minus(lit(100).divide(col("rs").plus(1)))));
+                            .otherwise(lit(100).minus(lit(100).divide(col("rs").plus(1)))));
        
               df = df.filter(col("rsi").notEqual(0).and(col("rsi").notEqual(100)));
        
               // 이전 RSI 값 계산
               df = df.withColumn("prev_rsi", lag("rsi", 1).over(Window.orderBy("timestamp")));
        
-              // 매수 및 매도 신호 설정 (이전 RSI와 비교)
+              // 기존 buySignal, sellSignal과 AND 연산 수행
               df = df.withColumn("buySignal",
-                     when(col("prev_rsi").leq(buyCriterion).and(col("rsi").gt(buyCriterion)), col("tradePrice"))
-                     .otherwise(lit(null)));
+                     col("buySignal").and(  // 기존 buySignal이 true일 때만 새로운 조건 적용
+                            col("prev_rsi").leq(buyCriterion).and(col("rsi").gt(buyCriterion))
+                     ));
        
               df = df.withColumn("sellSignal",
-                     when(col("prev_rsi").geq(sellCriterion).and(col("rsi").lt(sellCriterion)), col("tradePrice"))
-                     .otherwise(lit(null)));
+                     col("sellSignal").and(  // 기존 sellSignal이 true일 때만 새로운 조건 적용
+                            col("prev_rsi").geq(sellCriterion).and(col("rsi").lt(sellCriterion))
+                     ));
        
               return df;
        }
@@ -123,22 +125,25 @@ public class BackTester {
           
               // CCI 계산
               df = df.withColumn("cci", col("tp").minus(col("sma_tp"))
-                                      .divide(col("mad_tp").multiply(0.015)));
+                      .divide(col("mad_tp").multiply(0.015)));
           
               // 이전 CCI 값
               df = df.withColumn("prev_cci", lag("cci", 1).over(Window.orderBy("timestamp")));
           
-              // 매수 및 매도 신호 설정
+              // 기존 buySignal, sellSignal과 AND 연산 수행
               df = df.withColumn("buySignal",
-                      when(col("prev_cci").leq(buyCriterion).and(col("cci").gt(buyCriterion)), col("tradePrice"))
-                      .otherwise(lit(null)));
+                      col("buySignal").and(  // 기존 buySignal이 true일 때만 새로운 조건 적용
+                              col("prev_cci").leq(buyCriterion).and(col("cci").gt(buyCriterion))
+                      ));
           
               df = df.withColumn("sellSignal",
-                      when(col("prev_cci").geq(sellCriterion).and(col("cci").lt(sellCriterion)), col("tradePrice"))
-                      .otherwise(lit(null)));
+                      col("sellSignal").and(  // 기존 sellSignal이 true일 때만 새로운 조건 적용
+                              col("prev_cci").geq(sellCriterion).and(col("cci").lt(sellCriterion))
+                      ));
           
               return df;
        }
+          
 
        public Dataset<Row> backTestingPSYDataset(List<OHLCData> dataset, Map<String, String> condition) {
 
@@ -158,17 +163,20 @@ public class BackTester {
               // 이전 PSY 값
               df = df.withColumn("prev_psy", lag("psy", 1).over(Window.orderBy("timestamp")));
           
-              // 매수 및 매도 신호 설정
+              // 기존 buySignal, sellSignal과 AND 연산 수행
               df = df.withColumn("buySignal",
-                      when(col("prev_psy").leq(buyCriterion).and(col("psy").gt(buyCriterion)), col("tradePrice"))
-                      .otherwise(lit(null)));
+                      col("buySignal").and(  // 기존 buySignal이 true일 때만 새로운 조건 적용
+                              col("prev_psy").leq(buyCriterion).and(col("psy").gt(buyCriterion))
+                      ));
           
               df = df.withColumn("sellSignal",
-                      when(col("prev_psy").geq(sellCriterion).and(col("psy").lt(sellCriterion)), col("tradePrice"))
-                      .otherwise(lit(null)));
+                      col("sellSignal").and(  // 기존 sellSignal이 true일 때만 새로운 조건 적용
+                              col("prev_psy").geq(sellCriterion).and(col("psy").lt(sellCriterion))
+                      ));
           
               return df;
        }
+          
 
        public Dataset<Row> backTestingBollingerDataset(List<OHLCData> dataset) {
               Dataset<Row> df = spark.createDataFrame(dataset, OHLCData.class);
@@ -177,7 +185,7 @@ public class BackTester {
           
               // 최근 20일 이동 평균 및 표준 편차 계산
               WindowSpec windowSpec = Window.orderBy("timestamp").rowsBetween(-19, 0);
-              
+          
               df = df.withColumn("sma20", avg(col("tradePrice")).over(windowSpec))
                      .withColumn("stddev20", stddev(col("tradePrice")).over(windowSpec));
           
@@ -190,19 +198,22 @@ public class BackTester {
               df = df.withColumn("prev_lowerBand", lag("lowerBand", 1).over(Window.orderBy("timestamp")));
               df = df.withColumn("prev_upperBand", lag("upperBand", 1).over(Window.orderBy("timestamp")));
           
-              // 매수 및 매도 신호 설정
+              // 기존 buySignal, sellSignal과 AND 연산 수행
               df = df.withColumn("buySignal",
-                      when(col("prev_tradePrice").lt(col("prev_lowerBand"))
-                              .and(col("tradePrice").gt(col("lowerBand"))), col("tradePrice"))
-                      .otherwise(lit(null)));
+                      col("buySignal").and(  // 기존 buySignal이 true일 때만 새로운 조건 적용
+                              col("prev_tradePrice").lt(col("prev_lowerBand"))
+                                      .and(col("tradePrice").gt(col("lowerBand")))
+                      ));
           
               df = df.withColumn("sellSignal",
-                      when(col("prev_tradePrice").gt(col("prev_upperBand"))
-                              .and(col("tradePrice").lt(col("upperBand"))), col("tradePrice"))
-                      .otherwise(lit(null)));
+                      col("sellSignal").and(  // 기존 sellSignal이 true일 때만 새로운 조건 적용
+                              col("prev_tradePrice").gt(col("prev_upperBand"))
+                                      .and(col("tradePrice").lt(col("upperBand")))
+                      ));
           
               return df;
        }
+          
 
        public Dataset<Row> backTestingMACDDataset(List<OHLCData> dataset) {
               Dataset<Row> df = spark.createDataFrame(dataset, OHLCData.class);
@@ -228,16 +239,19 @@ public class BackTester {
               df = df.withColumn("prev_macd", lag("macd", 1).over(Window.orderBy("timestamp")));
               df = df.withColumn("prev_signal", lag("signal", 1).over(Window.orderBy("timestamp")));
           
-              // 매수 및 매도 신호 설정
+              // 기존 buySignal, sellSignal과 AND 연산 수행
               df = df.withColumn("buySignal",
-                      when(col("prev_macd").leq(col("prev_signal")).and(col("macd").gt(col("signal"))), col("tradePrice"))
-                      .otherwise(lit(null)));
+                      col("buySignal").and(  // 기존 buySignal이 true일 때만 새로운 조건 적용
+                              col("prev_macd").leq(col("prev_signal")).and(col("macd").gt(col("signal")))
+                      ));
           
               df = df.withColumn("sellSignal",
-                      when(col("prev_macd").geq(col("prev_signal")).and(col("macd").lt(col("signal"))), col("tradePrice"))
-                      .otherwise(lit(null)));
+                      col("sellSignal").and(  // 기존 sellSignal이 true일 때만 새로운 조건 적용
+                              col("prev_macd").geq(col("prev_signal")).and(col("macd").lt(col("signal")))
+                      ));
           
               return df;
        }
+          
 
 }

@@ -44,7 +44,8 @@ public class UserRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, user.getEmail());
             stmt.setString(2, user.getPassword());
-            stmt.setDate(3, new java.sql.Date(user.getCreatedAt().getTime()));
+            // stmt.setDate(3, new java.sql.Date(user.getCreatedAt().getTime()));
+            stmt.setDate(3, new java.sql.Date(System.currentTimeMillis())); // 현재 시간
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();

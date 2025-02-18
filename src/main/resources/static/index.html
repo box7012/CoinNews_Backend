@@ -13,31 +13,50 @@
         box-sizing: border-box;
       }
 
+      /* body와 #app 높이 설정 */
+      body, html {
+        height: 100%;
+      }
+
       body {
         position: relative;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #6D83F2, #4C91F1);
+        background: linear-gradient(135deg, #ffffff9c, #000000);
         display: flex;
         justify-content: center;
         align-items: center;
-        max-width: 10;
-        color: #333; /* 글씨를 검정색으로 설정 */
+        max-width: 100%;
+        color: #333;
         text-align: center;
         overflow: hidden;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        padding: 0px;
+        margin: 0px;
+      }
+
+      /* 다크 모드 */
+      body.dark {
+        background-color: #1b1b1b;
+        color: #fff;
       }
 
       #app {
         position: relative;
         background-color: rgba(255, 255, 255, 0.9);
         padding: 15px;
-        border-radius: 15px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        
-        width: 100vw; /* 부모 요소에 맞게 크기 조정 */
-        height: 100vh; /* 화면 크기에 맞는 높이 */
+        justify-content: center;
+        width: 100vw;
+        height: 100vh; /* 전체 화면 크기에 맞게 설정 */
         animation: fadeIn 1s ease-out;
-        box-sizing: border-box; /* 패딩 포함 */
-        overflow: auto; /* 내용이 넘칠 경우 스크롤 추가 */
+        box-sizing: border-box;
+        overflow: auto;
+        padding: 0px;
+        margin: 0px;
+      }
+      /* 각 컴포넌트 배경 설정 */
+      .component {
+        background-color: inherit; /* 부모 요소의 배경색을 그대로 사용 */
       }
 
       /* fadeIn 애니메이션 추가 */
@@ -50,12 +69,10 @@
         }
       }
 
-
-
       p {
         font-size: 1.2rem;
         margin-bottom: 2rem;
-        color: #333; /* 텍스트 색을 검정색으로 설정 */
+        color: #333; /* 기본 텍스트 색 */
       }
 
       button {
@@ -81,18 +98,6 @@
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       }
 
-      /* 애니메이션 */
-      @keyframes fadeIn {
-        0% {
-          opacity: 0;
-          transform: translateY(50px);
-        }
-        100% {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
       /* 모바일 반응형 */
       @media (max-width: 768px) {
         h1 {
@@ -106,13 +111,13 @@
           padding: 12px 20px;
         }
       }
-
     </style>
-    <script type="module" crossorigin src="/assets/index-3nLGzzHY.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-kTX3UrgT.css">
+    <script type="module" crossorigin src="/assets/index-CLxcYMJQ.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D-miLLRZ.css">
   </head>
   <body>
     <div id="app">
+      <router-view></router-view>
     </div>
   </body>
 </html>

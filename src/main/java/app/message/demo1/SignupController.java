@@ -19,7 +19,7 @@ import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/auth")
-@CrossOrigin(origins = "https://coin-dashboard.xyz")
+@CrossOrigin(origins = { "https://coin-dashboard.xyz", "http://192.168.0.2:8080"})
 public class SignupController {
 
     @Autowired
@@ -59,7 +59,7 @@ public class SignupController {
                 User user = new User();
                 user.setEmail(signupRequest.getEmail());
                 user.setPassword(signupRequest.getPassword());
-                user.setCreatedAt(new Date());
+                // user.setCreatedAt(new Date());
                 userRepository.save(user);
                 return ResponseEntity.ok("회원가입 성공");
             }

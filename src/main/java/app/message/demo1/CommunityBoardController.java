@@ -69,7 +69,8 @@ public class CommunityBoardController {
     public ResponseEntity<String> createPost(@RequestBody CommunityBoardPost newPost) {
         
         String email = getUserEmailFromToken();
-
+        log.info(email);
+        log.info("email");
         if (email == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
@@ -80,21 +81,42 @@ public class CommunityBoardController {
         return ResponseEntity.ok("게시글 저장 완료!");
     }
 
+    // private String getUserEmailFromToken() {
+    //     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    //     log.info(authentication);
+    //     log.info("getUserEmailFromToken authentication");
+    //     if (authentication == null || !authentication.isAuthenticated()) {
+    //         return null;
+    //     }
+    
+    //     try {
+    //         // authentication.getPrincipal()이 String인 경우, 그 자체가 이메일임
+    //         if (authentication.getPrincipal() instanceof String) {
+    //             return (String) authentication.getPrincipal();  // 이메일 반환
+    //         }
+    //     } catch (Exception e) {
+    //         return null;
+    //     }
+    
+    //     return null;
+    // }
+
     private String getUserEmailFromToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        log.info(authentication);
+        log.info("getUserEmailFromToken authentication");
         if (authentication == null || !authentication.isAuthenticated()) {
             return null;
         }
     
-        try {
-            // authentication.getPrincipal()이 String인 경우, 그 자체가 이메일임
-            if (authentication.getPrincipal() instanceof String) {
-                return (String) authentication.getPrincipal();  // 이메일 반환
-            }
-        } catch (Exception e) {
-            return null;
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof CustomUserDetails) {
+            return ((CustomUserDetails) principal).getUsername();
         }
-    
+        // 또는 UserDetails를 사용 중이라면:
+        if (principal instanceof UserDetails) {
+            return ((UserDetails) principal).getUsername();
+        }
         return null;
     }
 

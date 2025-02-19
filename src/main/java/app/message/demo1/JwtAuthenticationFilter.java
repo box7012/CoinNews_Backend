@@ -58,7 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null && jwtUtil.isTokenValid(token, jwtUtil.extractUsername(token))) {
             String username = jwtUtil.extractUsername(token);
-            log.info("Authenticated user: " + username);
+            log.info("doFilterInternal Authenticated user: " + username);
 
             // UserDetails 객체로 로드
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);

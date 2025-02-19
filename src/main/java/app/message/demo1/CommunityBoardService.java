@@ -49,7 +49,18 @@ public class CommunityBoardService {
     }
 
     // 게시글 삭제 메소드 예시
-    public void deletePost(Long postId) {
+    public void deletePost(Long postId, String userEmail) {
+        Optional<Post> postOptional = postRepository.findById(postId);
+        
+        if (postOptional.isEmpty()) {
+            throw new RuntimeException("삭제할 게시글을 찾을 수 없습니다. ID: " + postId);
+        }
+    
+        Post post = postOptional.get();
+        if (!post.getEmail().equals(userEmail)) {
+            throw new RuntimeException("본인이 작성한 글만 삭제할 수 있습니다.");
+        }
+    
         postRepository.deleteById(postId);
     }
 }

@@ -60,7 +60,7 @@ public class CommunityBoardRepository {
 
     // 게시글 ID로 조회
     public Optional<Post> findById(Long postId) {
-        String sql = "SELECT id, title, text, created_date FROM posts WHERE id = ?";
+        String sql = "SELECT id, email, title, text, created_date FROM posts WHERE id = ?";
         
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -69,6 +69,7 @@ public class CommunityBoardRepository {
                 if (rs.next()) {
                     Post post = new Post();
                     post.setId(rs.getLong("id"));
+                    post.setEmail(rs.getString("email"));
                     post.setTitle(rs.getString("title"));
                     post.setText(rs.getString("text"));
                     post.setCreatedDate(rs.getTimestamp("created_date").toLocalDateTime());

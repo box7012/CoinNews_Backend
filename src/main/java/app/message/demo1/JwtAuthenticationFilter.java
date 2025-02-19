@@ -9,6 +9,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -25,32 +26,52 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
+
+    // @Override
+    // protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    //         throws ServletException, IOException {
+
+    //     String token = getJwtFromRequest(request);
+    //     log.info("token" + token);
+
+    //     if (token != null && jwtUtil.isTokenValid(token, jwtUtil.extractUsername(token))) {
+
+    //         String username = jwtUtil.extractUsername(token);
+    //         log.info("Authenticated user: " + username);  // 로그 추가
+    //         // JWT가 유효하면 인증 설정
+    //         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+    //                 jwtUtil.extractUsername(token), null, new ArrayList<>());
+    //         SecurityContextHolder.getContext().setAuthentication(authentication);
+    //     }
+
+    //     filterChain.doFilter(request, response);
+    // }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
         String token = getJwtFromRequest(request);
+        log.info("token: " + token);
 
         if (token != null && jwtUtil.isTokenValid(token, jwtUtil.extractUsername(token))) {
-            // JWT가 유효하면 인증 설정
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    jwtUtil.extractUsername(token), null, new ArrayList<>());
+            String username = jwtUtil.extractUsername(token);
+            log.info("Authenticated user: " + username);
+
+            // UserDetails 객체로 로드
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            // 올바른 UserDetails 객체를 principal로 사용
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
         filterChain.doFilter(request, response);
     }
 
-    // private String getJwtFromRequest(HttpServletRequest request) {
-    //     String bearerToken = request.getHeader("Authorization");
-
-    //     log.info("Authorization 헤더 값: " + bearerToken); // 디버깅용 로그
-
-    //     if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-    //         return bearerToken.substring(7);
-    //     }
-    //     return null;
-    // }
     private String getJwtFromRequest(HttpServletRequest request) {
         Enumeration<String> headerNames = request.getHeaderNames();
 
@@ -60,6 +81,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
+
+        log.info("여기서 null이 나오나?");
         return null;
     }
 }

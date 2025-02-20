@@ -1,7 +1,6 @@
 package app.message.demo1;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -9,6 +8,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class CommunityBoardService {
@@ -44,12 +45,14 @@ public class CommunityBoardService {
     }
 
     // 특정 게시글 조회 메소드 예시
-    public Optional<Post> getPostById(Long postId) {
+    @Transactional
+    public Optional<Post> getPostById(int postId) {
+        // postRepository.incrementViews(postId);
         return postRepository.findById(postId);
     }
 
     // 게시글 삭제 메소드 예시
-    public void deletePost(Long postId, String userEmail) {
+    public void deletePost(int postId, String userEmail) {
         Optional<Post> postOptional = postRepository.findById(postId);
         
         if (postOptional.isEmpty()) {
@@ -63,4 +66,5 @@ public class CommunityBoardService {
     
         postRepository.deleteById(postId);
     }
+
 }

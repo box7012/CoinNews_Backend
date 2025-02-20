@@ -15,7 +15,7 @@ public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)  // auto_increment
-    private Long id;
+    private int id;
 
     @Column(nullable = false, length = 255)
     private String email;
@@ -29,6 +29,9 @@ public class Post {
     @Column(name = "created_date", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", insertable = false, updatable = false)
     private LocalDateTime createdDate;  // 'timestamp' 컬럼에 맞게 LocalDateTime 사용
 
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int views;  // 조회수 컬럼 추가 (기본값 0)
+
     // 기본 생성자
     public Post() {}
 
@@ -40,11 +43,11 @@ public class Post {
     }
 
     // Getter 및 Setter
-    public Long getId() {
+    public int getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(int id) {
         this.id = id;
     }
 
@@ -79,4 +82,17 @@ public class Post {
     public void setCreatedDate(LocalDateTime createdDate) {
         this.createdDate = createdDate;
     }
+
+    public int getViews() {
+        return views;
+    }
+
+    public void setViews(int views) {
+        this.views = views;
+    }
+
+    public void incrementViews() {
+        this.views++;
+    }
+
 }

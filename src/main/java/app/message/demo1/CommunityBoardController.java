@@ -2,6 +2,7 @@ package app.message.demo1;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,14 +44,14 @@ public class CommunityBoardController {
 
     @GetMapping("/posts/{id}")
     @ResponseBody
-    public ResponseEntity<Post> getPost(@PathVariable Long id) {
+    public ResponseEntity<Post> getPost(@PathVariable int id) {
         return communityBoardService.getPostById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/posts/{id}")
-    public ResponseEntity<Void> deletePost(@PathVariable Long id, @RequestParam String email, 
+    public ResponseEntity<Void> deletePost(@PathVariable int id, @RequestParam String email, 
                                            @AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null || !userDetails.getUsername().equals(email)) {
             log.info(userDetails);
@@ -61,8 +62,6 @@ public class CommunityBoardController {
         communityBoardService.deletePost(id, email);
         return ResponseEntity.noContent().build();
     }
-
-
 
     @PostMapping("/posts")
     @ResponseBody
@@ -80,26 +79,6 @@ public class CommunityBoardController {
 
         return ResponseEntity.ok("게시글 저장 완료!");
     }
-
-    // private String getUserEmailFromToken() {
-    //     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    //     log.info(authentication);
-    //     log.info("getUserEmailFromToken authentication");
-    //     if (authentication == null || !authentication.isAuthenticated()) {
-    //         return null;
-    //     }
-    
-    //     try {
-    //         // authentication.getPrincipal()이 String인 경우, 그 자체가 이메일임
-    //         if (authentication.getPrincipal() instanceof String) {
-    //             return (String) authentication.getPrincipal();  // 이메일 반환
-    //         }
-    //     } catch (Exception e) {
-    //         return null;
-    //     }
-    
-    //     return null;
-    // }
 
     private String getUserEmailFromToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

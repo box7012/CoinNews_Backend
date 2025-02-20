@@ -2,6 +2,8 @@ package app.message.demo1;
 
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -20,8 +22,13 @@ public class CommentController {
     @Autowired
     private CommentService commentService;
 
+    private final Log log = LogFactory.getLog(BacktestingController.class);
+
     @PostMapping
     public ResponseEntity<Comment> createComment(@PathVariable Long postId, @RequestBody Comment commentRequest) {
+        
+        log.info(commentRequest);
+        log.info("CommentController commentRequest");
         Comment comment = commentService.addComment(postId, commentRequest.getEmail(), commentRequest.getText());
         return ResponseEntity.ok(comment);
     }

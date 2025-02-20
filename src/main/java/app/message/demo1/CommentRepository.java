@@ -35,13 +35,8 @@ public class CommentRepository {
             while (resultSet.next()) {
                 Comment comment = new Comment();
                 comment.setId(resultSet.getLong("id"));
-                
-                // post_id 값을 이용해 Post 객체를 조회하고 설정
-                Long postIdFromDB = resultSet.getLong("post_id");
-                Optional<Post> postOptional = postRepository.findById(postIdFromDB);
-                Post post = postOptional.orElse(null); // 찾지 못한 경우 null로 처리
-                comment.setPost(post); // setPost는 Post 객체를 받습니다
-
+                comment.setPost_id(postId); // setPost는 Post 객체를 받습니다
+                comment.setEmail(resultSet.getString("email"));
                 comment.setText(resultSet.getString("text"));
                 comment.setCreatedAt(resultSet.getTimestamp("created_at"));
                 comments.add(comment);
@@ -54,13 +49,14 @@ public class CommentRepository {
     }
 
     public void save(Comment comment) {
-        String sql = "INSERT INTO comments (post_id, text, created_at) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO comments (post_id, email, text, created_at) VALUES (?, ?, ?, ?)";
 
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setLong(1, comment.getPost().getId()); // Post의 ID를 저장
-            preparedStatement.setString(2, comment.getText());
-            preparedStatement.setTimestamp(3, comment.getCreatedAt());
+            preparedStatement.setLong(1, comment.getPost_id()); // Post의 ID를 저장
+            preparedStatement.setString(2, comment.getEmail());
+            preparedStatement.setString(3, comment.getText());
+            preparedStatement.setTimestamp(4, comment.getCreatedAt());
 
             preparedStatement.executeUpdate();
         } catch (SQLException e) {

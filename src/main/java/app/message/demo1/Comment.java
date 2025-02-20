@@ -13,9 +13,9 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
-    private Post post;
+    private Long post_id;
 
     @Column(nullable = false)
     private String email;
@@ -28,8 +28,8 @@ public class Comment {
 
     public Comment() {}
 
-    public Comment(Post post, String email, String text) {
-        this.post = post;
+    public Comment(Long post_id, String email, String text) {
+        this.post_id = post_id;
         this.email = email;
         this.text = text;
         this.createdAt = new Timestamp(System.currentTimeMillis());

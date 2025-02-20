@@ -46,7 +46,7 @@ public class CommunityBoardRepository {
     // 모든 게시글 조회
     public List<Post> findAll() {
         List<Post> postList = new ArrayList<>();
-        String sql = "SELECT id, email, title, text, created_date FROM posts";  // 테이블에 맞게 수정
+        String sql = "SELECT id, email, title, text, created_date, views FROM posts";  // 테이블에 맞게 수정
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
@@ -58,6 +58,7 @@ public class CommunityBoardRepository {
                 post.setTitle(rs.getString("title"));
                 post.setText(rs.getString("text"));
                 post.setCreatedDate(rs.getTimestamp("created_date").toLocalDateTime());
+                post.setViews(rs.getInt("views"));
                 postList.add(post);
             }
         } catch (SQLException e) {
@@ -66,32 +67,6 @@ public class CommunityBoardRepository {
 
         return postList;
     }
-
-    // // 게시글 ID로 조회
-    // public Optional<Post> findById(int postId) {
-    //     String sql = "SELECT id, email, title, text, created_date, views FROM posts WHERE id = ?";
-
-    //     try (Connection conn = dataSource.getConnection();
-    //         PreparedStatement stmt = conn.prepareStatement(sql)) {
-    //         stmt.setInt(1, postId);  // int 타입이므로 setInt() 사용
-
-    //         try (ResultSet rs = stmt.executeQuery()) {
-    //             if (rs.next()) {
-    //                 Post post = new Post();
-    //                 post.setId(rs.getInt("id"));
-    //                 post.setEmail(rs.getString("email"));
-    //                 post.setTitle(rs.getString("title"));
-    //                 post.setText(rs.getString("text"));
-    //                 post.setCreatedDate(rs.getTimestamp("created_date").toLocalDateTime());
-    //                 post.setViews(rs.getInt("views")); // 조회수 컬럼 추가 처리
-    //                 return Optional.of(post);
-    //             }
-    //         }
-    //     } catch (SQLException e) {
-    //         e.printStackTrace();
-    //     }
-    //     return Optional.empty();
-    // }
 
     // 게시글 ID로 조회 및 조회수 1 증가
     public Optional<Post> findById(int postId) {
@@ -150,10 +125,10 @@ public class CommunityBoardRepository {
         }
     }
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Transactional
-    @Query("UPDATE Post p SET p.views = p.views + 1 WHERE p.id = :id")
-    void incrementViews(@Param("id") int id) {
-        log.info("incrementViews");
-    }
+    // @Modifying(clearAutomatically = true, flushAutomatically = true)
+    // @Transactional
+    // @Query("UPDATE Post p SET p.views = p.views + 1 WHERE p.id = :id")
+    // void incrementViews(@Param("id") int id) {
+    //     log.info("incrementViews");
+    // }
 }
